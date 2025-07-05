@@ -7,8 +7,8 @@ const User = require('../models/User');
 // Register a new user
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, isAdmin } = req.body;
-    console.log('Register request:', { name, email, isAdmin });
+    const { name, email, password} = req.body;
+    console.log('Register request:', { name, email });
 
     let user = await User.findOne({ email });
     if (user) {
@@ -19,12 +19,11 @@ router.post('/register', async (req, res) => {
       name,
       email,
       password: await bcrypt.hash(password, 10),
-      isAdmin: isAdmin || false, // Default to false unless explicitly set
     });
 
     await user.save();
 
-    const token = jwt.sign({ userId: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id,}, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
 
@@ -51,7 +50,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id,}, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
 
@@ -76,7 +75,7 @@ router.get('/me', async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json({ userId: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin });
+    res.json({ userId: user._id, name: user.name, email: user.email,});
   } catch (err) {
     console.error('Get user info error:', err);
     res.status(401).json({ message: 'Token is not valid' });

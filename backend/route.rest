@@ -1,0 +1,59 @@
+GET http://localhost:9000
+
+###
+
+GET http://localhost:3000/todos/67d2e8a11012996013aa13c6
+
+
+###
+
+POST http://localhost:9000/api/auth/register
+Content-Type: application/json
+
+{
+    "name": "Aishat",
+    "email": "aishat48@gmail.com",
+    "password": "aishat"
+}
+
+###
+
+POST http://localhost:9000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "emmanueloguntolu48@gmail.com",
+    "password": "123456"
+}
+
+
+###
+
+GET http://localhost:9000/api/auth/me
+
+
+###
+
+
+POST http://localhost:9000/api/transactions
+Content-Type: application/json
+
+
+{
+  "sender": "686873b837e5d1b14ad03ada",
+  "recipient": "6868757637e5d1b14ad03ade",
+  "amount": 15075
+}
+
+###
+
+
+GET http://localhost:9000/api/transactions/686873b837e5d1b14ad03ada
+Content-Type: application/json
+
+
+
+
+
+
+
