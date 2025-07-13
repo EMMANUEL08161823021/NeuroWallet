@@ -1,85 +1,144 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const mongoose = require("mongoose");
 const User = require('../models/User');
+const Credential = require('../models/Credential');
 
-// Register a new user
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password} = req.body;
-    console.log('Register request:', { name, email });
+const {
+  // generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} = require("@simplewebauthn/server");
 
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+const base64url = require('base64url');
 
+const { generateRegistrationOptions } = require('@simplewebauthn/server');
+
+// Generate Registration Options
+router.post("/generate-registration-options", async (req, res) => {
+  const { email } = req.body;
+
+  let user = await User.findOne({ email });
+  let userIDBuffer;
+
+  if (!user) {
+    const newId = new mongoose.Types.ObjectId();
     user = new User({
-      name,
+      _id: newId,
       email,
-      password: await bcrypt.hash(password, 10),
     });
-
     await user.save();
 
-    const token = jwt.sign({ userId: user._id,}, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
-
-    res.json({ token });
-  } catch (err) {
-    console.error('Register error:', err);
-    res.status(500).json({ message: err.message });
+    userIDBuffer = newId.id;
+  } else {
+    userIDBuffer = user._id.id;
   }
+
+  console.log("userID Buffer length:", userIDBuffer.length);
+  console.log("userID Buffer hex:", userIDBuffer.toString("hex"));
+
+  const options = generateRegistrationOptions({
+    rpName: "My App",
+    rpID: "localhost",
+    userID: userIDBuffer,
+    userName: email,
+    userDisplayName: email,
+  });
+
+  req.session.currentChallenge = options.challenge;
+
+  res.json(options);
 });
 
-// Login a user
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    console.log('Login request:', { email });
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
 
-    const token = jwt.sign({ userId: user._id,}, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
 
-    res.json({ token });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ message: err.message });
+// Verify Registration
+router.post("/verify-registration", async (req, res) => {
+  const { email, attestationResponse } = req.body;
+  const user = await User.findOne({ email });
+  const expectedChallenge = req.session.currentChallenge;
+
+  if (!expectedChallenge) {
+    return res.status(400).json({ error: "No challenge found in session" });
   }
+
+  const verification = await verifyRegistrationResponse({
+    response: attestationResponse,
+    expectedChallenge,
+    expectedOrigin: "http://localhost:5173",
+    expectedRPID: "localhost",
+  });
+
+  if (!verification.verified) {
+    return res.status(400).json({ error: "Verification failed" });
+  }
+
+  const { credentialPublicKey, credentialID, counter } = verification.registrationInfo;
+
+  await Credential.create({
+    userId: user._id,
+    credentialID: Buffer.from(credentialID),
+    credentialPublicKey: Buffer.from(credentialPublicKey),
+    counter,
+  });
+
+  res.json({ verified: true });
 });
 
-// Get authenticated user info
-router.get('/me', async (req, res) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-        return res.status(401).json({ message: 'No token, authorization denied' });
-    }
+// Generate Authentication Options
+router.post("/generate-authentication-options", async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  const credentials = await Credential.find({ userId: user._id });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
-    if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-    }
+  const options = generateAuthenticationOptions({
+    rpID: "localhost",
+    userVerification: "preferred",
+    allowCredentials: credentials.map(c => ({
+      id: c.credentialID,
+      type: "public-key",
+    })),
+  });
 
-    res.json({ userId: user._id, name: user.name, email: user.email,});
-  } catch (err) {
-    console.error('Get user info error:', err);
-    res.status(401).json({ message: 'Token is not valid' });
+  req.session.currentChallenge = options.challenge;
+  res.json(options);
+});
+
+// Verify Authentication
+router.post("/verify-authentication", async (req, res) => {
+  const { email, assertionResponse } = req.body;
+  const user = await User.findOne({ email });
+  const expectedChallenge = req.session.currentChallenge;
+
+  const dbCred = await Credential.findOne({
+    credentialID: Buffer.from(assertionResponse.rawId, "base64url"),
+  });
+
+  if (!dbCred) return res.status(400).json({ error: "Credential not found" });
+
+  const verification = await verifyAuthenticationResponse({
+    response: assertionResponse,
+    expectedChallenge,
+    expectedOrigin: "http://localhost:5173",
+    expectedRPID: "localhost",
+    authenticator: {
+      credentialID: dbCred.credentialID,
+      credentialPublicKey: dbCred.credentialPublicKey,
+      counter: dbCred.counter,
+    },
+  });
+
+  if (!verification.verified) {
+    return res.status(400).json({ error: "Verification failed" });
   }
+
+  dbCred.counter = verification.authenticationInfo.newCounter;
+  await dbCred.save();
+
+  res.json({ verified: true });
 });
 
 module.exports = router;

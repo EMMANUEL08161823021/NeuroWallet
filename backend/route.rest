@@ -7,13 +7,11 @@ GET http://localhost:3000/todos/67d2e8a11012996013aa13c6
 
 ###
 
-POST http://localhost:9000/api/auth/register
+POST http://localhost:9000/api/auth/generate-registration-options
 Content-Type: application/json
 
 {
-    "name": "Aishat",
-    "email": "aishat48@gmail.com",
-    "password": "aishat"
+  "email": "test@example.com"
 }
 
 ###

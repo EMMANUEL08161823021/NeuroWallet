@@ -1,33 +1,39 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
 
-// const productRoutes = require('./routes/products');
-const authRoutes = require('./routes/auth');
-const transactionRoutes = require('./routes/transactions');
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const session = require("express-session");
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// CORS must allow the frontend port (5173)
+app.use(cors({
+  origin: "http://localhost:5173/login",
+  credentials: true,
+}));
+
+// Parse JSON request bodies
 app.use(express.json());
 
-// Routes
+// Session middleware must come before routes
+app.use(session({
+  secret: 'secret',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false },
+}));
 
-app.use('/api/auth', authRoutes);
-app.use('/api/transactions', transactionRoutes);
+// Import and use your auth router
+const authRouter = require("./routes/auth");
+app.use("/api/auth", authRouter);
 
-
-
-// console.log(process.env.MONGO_URI);
-
-
+// MongoDB Connection
 
 // Database Connection
-mongoose.connect("mongodb+srv://emmanueloguntol48:OwW9Nf31vOP6CTHR@e-commerce.nx5bkwj.mongodb.net", {
+mongoose.connect(process.env.MONGO_URI, {
   dbName: 'NeuroWallet',
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -36,5 +42,5 @@ mongoose.connect("mongodb+srv://emmanueloguntol48:OwW9Nf31vOP6CTHR@e-commerce.nx
   .catch(err => console.error(err));
 
 // Start Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 9000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
