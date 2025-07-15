@@ -121,7 +121,7 @@ const Login = () => {
             {!isRegistered ? (
                 <button
                     onClick={registerCredential}
-                    className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                    className="w-full bg-blue-500 text-dark py-2 px-4 rounded hover:bg-blue-600 disabled:bg-gray-400"
                     disabled={!isWebAuthnSupported()}
                 >
                     Register Fingerprint
@@ -129,12 +129,19 @@ const Login = () => {
             ) : (
                 <button
                     onClick={authenticate}
-                    className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 disabled:bg-gray-400"
+                    className="w-full bg-green-500 text-dark py-2 px-4 rounded hover:bg-green-600 disabled:bg-gray-400"
                     disabled={!isWebAuthnSupported()}
                 >
                     Authenticate with Fingerprint
                 </button>
             )}
+            <button
+                onClick={authenticate}
+                className="w-full bg-green-500 text-dark py-2 px-4 rounded hover:bg-green-600 disabled:bg-gray-400"
+                disabled={!isWebAuthnSupported()}
+            >
+                Authenticate with Fingerprint
+            </button>
           </div>
 
         </div>

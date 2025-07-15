@@ -4,7 +4,7 @@ import Login from './components/Login/Login';
 import Navbar from './components/Navbar/Navbar';
 // import ProductPage from './components/Product/ProductPage';
 // import AdminPanel from './components/AdminPanel/AdminPanel';
-import Cart from './components/Cart/Cart';
+import Cart from './components/Transaction/Transaction';
 import Register from './components/Register/Register';
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
