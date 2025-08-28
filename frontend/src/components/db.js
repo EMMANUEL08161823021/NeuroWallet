@@ -1,1 +1,299 @@
-const USER = [];
+import { useState, useEffect, useRef } from "react";
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
+
+// GestureButton component to handle tap, double tap, and swipe
+const GestureButton = ({ onTap, onDoubleTap, onSwipe }) => {
+  const buttonRef = useRef(null);
+  let tapCount = 0;
+  let touchStartX = 0;
+
+  const handleTouchStart = (e) => {
+    touchStartX = e.touches[0].clientX;
+    tapCount++;
+    setTimeout(() => {
+      if (tapCount === 1) {
+        onTap();
+      } else if (tapCount === 2) {
+        onDoubleTap();
+      }
+      tapCount = 0;
+    }, 300);
+  };
+
+  const handleTouchMove = (e) => {
+    const touchEndX = e.touches[0].clientX;
+    const diff = touchEndX - touchStartX;
+    if (Math.abs(diff) > 50) {
+      onSwipe(diff > 0 ? "right" : "left");
+    }
+  };
+
+  return (
+    <button
+      ref={buttonRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
+      aria-label="Interact with gestures: tap to speak commands, double tap to cancel, swipe to confirm"
+    >
+      Interact
+    </button>
+  );
+};
+
+const Homepage = () => {
+  const [amount, setAmount] = useState("");
+  const [numericAmount, setNumericAmount] = useState(null);
+  const [description, setDescription] = useState("");
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState("");
+  const [speechMode, setSpeechMode] = useState(null); // null, "command", "amount"
+
+  const beneficiaries = [
+    { name: "Emmanuel", provider: "Palmpay", account: "7082659880" },
+    { name: "Heuro", provider: "Opay", account: "1234567890" },
+    { name: "Richard", provider: "Kuda", account: "2233445566" },
+    { name: "Emeka", provider: "Palmpay", account: "9988776655" },
+    { name: "Lashe", provider: "UBA", account: "5566778899" },
+  ];
+
+  const filteredBeneficiaries = beneficiaries.filter((b) =>
+    `${b.name} ${b.provider}`.toLowerCase().includes(query.trim().toLowerCase())
+  );
+
+  const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (!browserSupportsSpeechRecognition) {
+      setError("Your browser does not support speech recognition. Please use Chrome.");
+    }
+  }, [browserSupportsSpeechRecognition]);
+
+  useEffect(() => {
+    if (transcript && speechMode) {
+      const command = transcript.toLowerCase().trim();
+      if (speechMode === "command") {
+        switch (command) {
+          case "1":
+            setSpeechMode("amount");
+            const promptUtterance = new SpeechSynthesisUtterance("Please say the amount.");
+            window.speechSynthesis.speak(promptUtterance);
+            SpeechRecognition.startListening({ continuous: false, language: "en-US" });
+            break;
+          case "a":
+            if (selectedBeneficiary) {
+              const nameUtterance = new SpeechSynthesisUtterance(`Name: ${selectedBeneficiary.name}`);
+              window.speechSynthesis.speak(nameUtterance);
+            } else {
+              setError("No beneficiary selected.");
+            }
+            setSpeechMode(null);
+            break;
+          case "b":
+            if (selectedBeneficiary) {
+              const providerUtterance = new SpeechSynthesisUtterance(`Provider: ${selectedBeneficiary.provider}`);
+              window.speechSynthesis.speak(providerUtterance);
+            } else {
+              setError("No beneficiary selected.");
+            }
+            setSpeechMode(null);
+            break;
+          case "c":
+            if (selectedBeneficiary) {
+              const accountUtterance = new SpeechSynthesisUtterance(`Account number: ${selectedBeneficiary.account}`);
+              window.speechSynthesis.speak(accountUtterance);
+            } else {
+              setError("No beneficiary selected.");
+            }
+            setSpeechMode(null);
+            break;
+          default:
+            setError("Invalid command. Say '1' for amount, 'A' for name, 'B' for provider, or 'C' for account number.");
+            setSpeechMode(null);
+        }
+      } else if (speechMode === "amount") {
+        const numericValue = parseFloat(command);
+        if (!isNaN(numericValue)) {
+          const formattedAmount = numericValue.toFixed(2);
+          setNumericAmount(formattedAmount);
+          setAmount(formattedAmount);
+          const amountUtterance = new SpeechSynthesisUtterance(`Amount set to $${formattedAmount}`);
+          window.speechSynthesis.speak(amountUtterance);
+        } else {
+          setError("Could not parse the spoken amount. Please try again.");
+        }
+        setSpeechMode(null);
+      }
+      resetTranscript();
+    }
+  }, [transcript, speechMode, selectedBeneficiary]);
+
+  useEffect(() => {
+    if (selectedBeneficiary) {
+      const utterance = new SpeechSynthesisUtterance(
+        `Selected beneficiary: ${selectedBeneficiary.name}, ${selectedBeneficiary.provider}, account number ${selectedBeneficiary.account}`
+      );
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [selectedBeneficiary]);
+
+  const startListening = (mode) => {
+    if (!browserSupportsSpeechRecognition) return;
+    resetTranscript();
+    setError("");
+    setSpeechMode(mode);
+    SpeechRecognition.startListening({ continuous: false, language: "en-US" });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!numericAmount || isNaN(numericAmount) || parseFloat(numericAmount) <= 0) {
+      setError("Please provide a valid amount.");
+      return;
+    }
+    const confirmationText = `Transferring $${numericAmount} to ${selectedBeneficiary.name}`;
+    const utterance = new SpeechSynthesisUtterance(confirmationText);
+    window.speechSynthesis.speak(utterance);
+    alert(confirmationText);
+    setAmount("");
+    setNumericAmount(null);
+    setDescription("");
+    resetTranscript();
+  };
+
+  const handleDoubleTap = () => {
+    setAmount("");
+    setNumericAmount(null);
+    setSelectedBeneficiary(null);
+    setError("");
+    setSpeechMode(null);
+    resetTranscript();
+    const cancelUtterance = new SpeechSynthesisUtterance("Transaction attempt canceled.");
+    window.speechSynthesis.speak(cancelUtterance);
+  };
+
+  const handleSwipe = (direction) => {
+    if (direction === "right") {
+      navigator.vibrate(200); // Single vibration for swipe detected
+      if (selectedBeneficiary && numericAmount) {
+        const confirmationText = `Transferring $${numericAmount} to ${selectedBeneficiary.name}`;
+        const confirmUtterance = new SpeechSynthesisUtterance(confirmationText);
+        window.speechSynthesis.speak(confirmUtterance);
+        navigator.vibrate([200, 100, 200]); // Double vibration for confirmation
+        alert(confirmationText);
+      } else {
+        setError("Please select a beneficiary and specify an amount first.");
+      }
+    }
+  };
+
+  return (
+    <div className="bg-gray-100 p-4 min-h-screen">
+      <div className="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Welcome Back</h2>
+          <h2 className="text-xl font-bold text-green-600">$2,000.00</h2>
+        </div>
+
+        <h3 className="text-lg font-semibold mb-2">Beneficiaries</h3>
+        <input
+          type="search"
+          className="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search beneficiary..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search beneficiaries"
+        />
+
+        <div className="space-y-2">
+          {filteredBeneficiaries.map((b, idx) => (
+            <div
+              key={idx}
+              className="border p-2 rounded flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              tabIndex="0"
+              onClick={() => setSelectedBeneficiary(b)}
+              onKeyPress={(e) => e.key === "Enter" && setSelectedBeneficiary(b)}
+              aria-label={`Select ${b.name} from ${b.provider}`}
+            >
+              <div>
+                <p className="font-medium">{b.name}</p>
+                <span className="text-sm text-gray-600">{b.provider}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {selectedBeneficiary && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold">Transfer to {selectedBeneficiary.name}</h3>
+            <p className="text-sm text-gray-600">
+              {selectedBeneficiary.account} {selectedBeneficiary.provider}
+            </p>
+
+            {error && <p className="text-red-500 mt-2" aria-live="polite">{error}</p>}
+
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <div>
+                <label htmlFor="amount" className="block text-gray-700">Amount ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="amount"
+                  value={amount}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setError("");
+                  }}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-required="true"
+                  placeholder="Enter or speak amount"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="description" className="block text-gray-700">Description</label>
+                <input
+                  type="text"
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-required="true"
+                  placeholder="What's this for?"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => startListening("amount")}
+                  disabled={listening}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:bg-gray-400"
+                  aria-label={listening ? "Listening for speech" : "Start speaking amount"}
+                >
+                  {listening ? "Listening..." : "Speak Amount"}
+                </button>
+                <button
+                  type="submit"
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  aria-label="Confirm transfer"
+                >
+                  Transfer
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        <GestureButton
+          onTap={() => startListening("command")}
+          onDoubleTap={handleDoubleTap}
+          onSwipe跨={handleSwipe}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default Homepage;

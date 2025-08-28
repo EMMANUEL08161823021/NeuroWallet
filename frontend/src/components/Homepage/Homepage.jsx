@@ -1,35 +1,70 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-// import { wordsToNumbers } from "words-to-numbers";
+
+// GestureButton component to handle tap, double tap, and swipe
+const GestureButton = ({ onTap, onDoubleTap, onSwipe }) => {
+  const buttonRef = useRef(null);
+  let tapCount = 0;
+  let touchStartX = 0;
+
+  const handleTouchStart = (e) => {
+    touchStartX = e.touches[0].clientX;
+    tapCount++;
+    setTimeout(() => {
+      if (tapCount === 1) {
+        onTap();
+      } else if (tapCount === 2) {
+        onDoubleTap();
+      }
+      tapCount = 0;
+    }, 300);
+  };
+
+  const handleTouchMove = (e) => {
+    const touchEndX = e.touches[0].clientX;
+    const diff = touchEndX - touchStartX;
+    if (Math.abs(diff) > 50) {
+      onSwipe(diff > 0 ? "right" : "left");
+    }
+  };
+
+  return (
+    <button
+    style={{width: '100%', padding: '40px'}}
+      ref={buttonRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
+      aria-label="Interact with gestures: tap to speak commands, double tap to cancel, swipe to confirm"
+    >
+      Interact
+    </button>
+  );
+};
 
 const Homepage = () => {
   const [amount, setAmount] = useState("");
   const [numericAmount, setNumericAmount] = useState(null);
-  const [accountFrom, setAccountFrom] = useState("");
-  const [accountTo, setAccountTo] = useState("");
-  const [error, setError] = useState("");
   const [description, setDescription] = useState("");
   const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   const [query, setQuery] = useState("");
+  const [error, setError] = useState("");
+  const [speechMode, setSpeechMode] = useState(null); // null, "command"
+  const [listeningForAmount, setListeningForAmount] = useState(false); // New state for amount listening
 
   const beneficiaries = [
     { name: "Emmanuel", provider: "Palmpay", account: "7082659880" },
     { name: "Heuro", provider: "Opay", account: "1234567890" },
     { name: "Richard", provider: "Kuda", account: "2233445566" },
     { name: "Emeka", provider: "Palmpay", account: "9988776655" },
-    { name: "Lashe", provider: "UBA", account: "5566778899" },
+    { name: "Lashe", provider: "U B A", account: "5566778899" },
   ];
 
-  // Filter based on name or provider
   const filteredBeneficiaries = beneficiaries.filter((b) =>
-    `${b.name} ${b.provider}`
-      .toLowerCase()
-      .includes(query.trim().toLowerCase())
+    `${b.name} ${b.provider}`.toLowerCase().includes(query.trim().toLowerCase())
   );
 
-
   const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
-
 
   useEffect(() => {
     if (!browserSupportsSpeechRecognition) {
@@ -38,282 +73,231 @@ const Homepage = () => {
   }, [browserSupportsSpeechRecognition]);
 
   useEffect(() => {
-    if (transcript) {
-      try {
-        const cleanedTranscript = transcript.toLowerCase().replace(/[^a-z0-9\s]/g, '');
-        const numericValue = wordsToNumbers(cleanedTranscript);
-        if (numericValue && !isNaN(numericValue)) {
-          const formattedAmount = parseFloat(numericValue).toFixed(2);
-          setNumericAmount(formattedAmount);
-          setAmount(formattedAmount);
-        } else {
-          setError('Could not parse the spoken amount. Please try again (e.g., "one hundred dollars").');
+    if (transcript && speechMode) {
+      const command = transcript.toLowerCase().trim();
+      if (speechMode === "command") {
+        switch (command) {
+          case "one":
+            setListeningForAmount(true); // Show "Listening..." for amount
+            const fixedAmount = "2000.00";
+            setNumericAmount(fixedAmount);
+            setAmount(fixedAmount);
+            const amountUtterance = new SpeechSynthesisUtterance("Your Account Balance is $2000");
+            window.speechSynthesis.speak(amountUtterance);
+            setSpeechMode(null);
+            setListeningForAmount(false); // Hide "Listening..." after setting amount
+            break;
+          case "A":
+            console.log(selectedBeneficiary);
+            
+            if (selectedBeneficiary) {
+              const nameUtterance = new SpeechSynthesisUtterance(`Name: ${selectedBeneficiary.name}`);
+              window.speechSynthesis.speak(nameUtterance);
+            } else {
+              setError("No beneficiary selected.");
+            }
+            setSpeechMode(null);
+            break;
+          case "B":
+            if (selectedBeneficiary) {
+              const providerUtterance = new SpeechSynthesisUtterance(`Provider: ${selectedBeneficiary.provider}`);
+              window.speechSynthesis.speak(providerUtterance);
+            } else {
+              setError("No beneficiary selected.");
+            }
+            setSpeechMode(null);
+            break;
+          case "C":
+            if (selectedBeneficiary) {
+              const accountUtterance = new SpeechSynthesisUtterance(`Account number: ${selectedBeneficiary.account}`);
+              window.speechSynthesis.speak(accountUtterance);
+            } else {
+              setError("No beneficiary selected.");
+            }
+            setSpeechMode(null);
+            break;
+          default:
+            setError("Invalid command. Say '1' for amount, 'A' for name, 'B' for provider, or 'C' for account number.");
+            setSpeechMode(null);
         }
-      } catch (err) {
-        setError('Error processing spoken amount. Please try again.');
       }
+      resetTranscript();
     }
-  }, [transcript]);
+  }, [transcript, speechMode, selectedBeneficiary]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!numericAmount || isNaN(numericAmount) || parseFloat(numericAmount) <= 0) {
-      setError("Please provide a valid amount.");
-      return;
+  useEffect(() => {
+    if (selectedBeneficiary) {
+      const utterance = new SpeechSynthesisUtterance(
+        `Selected beneficiary: ${selectedBeneficiary.name}, ${selectedBeneficiary.provider}, account number ${selectedBeneficiary.account}`
+      );
+      window.speechSynthesis.speak(utterance);
     }
-    // if (!accountFrom) {
-    //   setError("Please fill in both account fields.");
-    //   return;
-    // }
-    setError("");
-    alert(`Transferring $${numericAmount} to Emmanuel`);
-    setAmount("");
-    setNumericAmount(null);
-    setAccountFrom("");
-    setAccountTo("");
-    resetTranscript();
-  };
+  }, [selectedBeneficiary]);
 
-  const startListening = () => {
+  const startListening = (mode) => {
     if (!browserSupportsSpeechRecognition) return;
     resetTranscript();
     setError("");
+    setSpeechMode(mode);
     SpeechRecognition.startListening({ continuous: false, language: "en-US" });
   };
 
-  const stopListening = () => {
-    if (!browserSupportsSpeechRecognition) return;
-    SpeechRecognition.stopListening();
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (numericAmount === null || isNaN(numericAmount) || numericAmount <= 0) {
+      setError("Please provide a valid amount.");
+      return;
+    }
+    const confirmationText = `Transferring $${numericAmount} to ${selectedBeneficiary.name}`;
+    const utterance = new SpeechSynthesisUtterance(confirmationText);
+    window.speechSynthesis.speak(utterance);
+    alert(confirmationText);
+    setAmount("");
+    setNumericAmount(null);
+    setDescription("");
+    resetTranscript();
+  };
+
+
+  const handleDoubleTap = () => {
+    setAmount("");
+    setNumericAmount(null);
+    setSelectedBeneficiary(null);
+    setError("");
+    setSpeechMode(null);
+    setListeningForAmount(false);
+    resetTranscript();
+    const cancelUtterance = new SpeechSynthesisUtterance("Transaction attempt canceled.");
+    window.speechSynthesis.speak(cancelUtterance);
+  };
+
+  const handleSwipe = (direction) => {
+    if (direction === "right") {
+      navigator.vibrate(200); // Single vibration for swipe detected
+      if (selectedBeneficiary && numericAmount) {
+        const confirmationText = `Transferring $${numericAmount} to ${selectedBeneficiary.name}`;
+        const confirmUtterance = new SpeechSynthesisUtterance(confirmationText);
+        window.speechSynthesis.speak(confirmUtterance);
+        navigator.vibrate([200, 100, 200]); // Double vibration for confirmation
+        alert(confirmationText);
+      } else {
+        setError("Please select a beneficiary and specify an amount first.");
+      }
+    }
   };
 
   return (
-    <div
-      className="position-relative col-12 col-sm-9 col-lg-5 mx-auto overflow-scroll p-2 border"
-      style={{ height: "100vh", border: "2px solid black" }}
-    >
-      <div style={{ height: "56px" }}></div>
-      <div className="d-flex justify-content-between align-items-center">
-        <h2>Welcome Back</h2>
-        <h2>$2,000.00</h2>
-
-      </div>
-      <div>
-        <h3 style={{ fontSize: "15px" }}>Beneficiary</h3>
-        <p style={{ fontSize: "13px" }}>List of Beneficiaries.</p>
-        <div>
-          <div>
-            <input
-              type="search"
-              className="form-control"
-              placeholder="Search beneficiary..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="d-flex flex-column gap-2 mt-2">
-            {filteredBeneficiaries.length === 0 && (
-              <p className="text-muted">No beneficiaries found.</p>
-            )}
-            {filteredBeneficiaries.map((b, idx) => (
-              <div
-                key={idx}
-                className="border text-dark p-2 rounded border-black d-flex align-items-center justify-content-between"
-              >
-                <div className="col-12">
-                  <div className="d-flex align-items-center gap-1">
-                    <div className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id={`checkbox-${idx}`}
-                      />
-                    </div>
-                    <div
-                      role="button"
-                      data-bs-toggle="offcanvas"
-                      data-bs-target="#offcanvasTwo"
-                      aria-controls="offcanvasTwo"
-                      style={{ width: "100%" }}
-                      onClick={() => setSelectedBeneficiary(b)}
-                      className="d-flex flex-column text-left"
-                    >
-                      <p style={{ fontSize: "13px" }} className="mb-0">
-                        {b.name}
-                      </p>
-                      <span style={{ fontSize: "11px" }} className="text-muted">
-                        {b.provider}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="bg-gray-100 p-4 min-h-screen">
+      <div className="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Welcome Back</h2>
+          <h2 className="text-xl font-bold text-green-600">$2,000.00</h2>
         </div>
 
-        {/* Create To-Do Offcanvas */}
-        <div
-          className="offcanvas offcanvas-bottom col-12 col-sm-5 mx-auto"
-          style={{ height: "100vh" }}
-          id="offcanvasOne"
-          tabIndex="-1"
-        >
-          <div className="offcanvas-body small">
-            <h2>Add Beneficiaries</h2>
-            <p>
-              Please fill out this form to reach your beneficiaries easily.
+        <h3 className="text-lg font-semibold mb-2">Beneficiaries</h3>
+        <input
+          type="search"
+          className="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search beneficiary..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search beneficiaries"
+        />
+
+        <div className="space-y-2">
+          {filteredBeneficiaries.map((b, idx) => (
+            <div
+              key={idx}
+              className="border p-2 rounded flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              tabIndex="0"
+              onClick={() => setSelectedBeneficiary(b)}
+              onKeyPress={(e) => e.key === "Enter" && setSelectedBeneficiary(b)}
+              aria-label={`Select ${b.name} from ${b.provider}`}
+            >
+              <div>
+                <p className="font-medium">{b.name}</p>
+                <span className="text-sm text-gray-600">{b.provider}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {selectedBeneficiary && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold">Transfer to {selectedBeneficiary.name}</h3>
+            <p className="text-sm text-gray-600">
+              {selectedBeneficiary.account} {selectedBeneficiary.provider}
             </p>
-            <form className="container px-0">
-              <div className="d-flex flex-column gap-2">
-                <div className="d-flex flex-column">
-                  <label>Name</label>
-                  <input
-                    className="form-control"
-                    name="name"
-                    type="text"
-                    required
-                    placeholder="Enter the title of the task"
-                  />
-                </div>
-                <div className="d-flex flex-column">
-                  <label>Bank Name</label>
-                  <input
-                    className="form-control"
-                    name="description"
-                    type="text"
-                    required
-                    placeholder="What it entails"
-                  />
-                </div>
-                <div className="d-flex justify-content-between mt-2">
-                  <button
-                    className="btn btn-outline-secondary"
-                    data-bs-dismiss="offcanvas"
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="btn btn-dark"
-                    type="submit"
-                  >
-                    Save
-                  </button>
-                </div>
+
+            {error && <p className="text-red-500 mt-2" aria-live="polite">{error}</p>}
+            {listeningForAmount && <p className="text-blue-500 mt-2" aria-live="polite">Listening...</p>}
+
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <div>
+                <label htmlFor="amount" className="block text-gray-700">Amount ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="amount"
+                  value={amount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "") {
+                      setAmount("");
+                      setNumericAmount(null);
+                    } else {
+                      const parsed = parseFloat(value);
+                      setAmount(value);
+                      setNumericAmount(parsed);
+                    }
+                    setError("");
+                  }}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-required="true"
+                  placeholder="Enter or speak amount"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="description" className="block text-gray-700">Description</label>
+                <input
+                  type="text"
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-required="true"
+                  placeholder="What's this for?"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => startListening("command")}
+                  disabled={listening}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:bg-gray-400"
+                  aria-label={listening ? "Listening for speech" : "Start speaking command"}
+                >
+                  {listening ? "Listening..." : "Speak Command"}
+                </button>
+                <button
+                  type="submit"
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  aria-label="Confirm transfer"
+                >
+                  Transfer
+                </button>
               </div>
             </form>
           </div>
-        </div>
-        {/* Edit Beneficiary Offcanvas */}
-        <div
-          className="offcanvas offcanvas-bottom col-12 col-sm-5 mx-auto"
-          style={{ height: "100vh" }}
-          id="offcanvasTwo"
-          tabIndex="-1"
-        >
-          <div className="offcanvas-body small">
-            {selectedBeneficiary ? (
-            <div className="container d-flex justify-content-between align-items-center px-0">
-              <div>
-                <h2>{selectedBeneficiary.name}</h2>
-                <p>
-                  {selectedBeneficiary.account} {selectedBeneficiary.provider}
-                </p>
-              </div>
-              <button
-                className="btn btn-outline-secondary"
-                data-bs-dismiss="offcanvas"
-                type="button"
-              >
-                Cancel
-              </button>
-            </div>
-            ) : (
-              <p className="text-muted">Select a beneficiary to view details.</p>
-            )}
+        )}
 
-            {error && <p className="text-danger mt-2">{error}</p>}
-
-            {selectedBeneficiary && (
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label>Amount ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => {
-                      setAmount(e.target.value);
-                      setError("");
-                    }}
-                    className="form-control"
-                    placeholder="Enter or speak amount"
-                  />
-                </div>
-                <div className="mb-3">
-                  <label>Description</label>
-                  <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="form-control"
-                    placeholder="What's this for?"
-                  />
-                  <div className="mt-2 d-flex gap-2 flex-wrap">
-                    {["Rent", "Gift", "Food", "Utilities", "Loan Repayment"].map(
-                      (label) => (
-                        <button
-                          type="button"
-                          key={label}
-                          className="btn btn-outline-secondary btn-sm"
-                          onClick={() => setDescription(label)}
-                        >
-                          {label}
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-                <div className="d-flex gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={startListening}
-                    disabled={listening}
-                  >
-                    {listening ? "Listening..." : "Speak Amount"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={stopListening}
-                    disabled={!listening}
-                  >
-                    Stop
-                  </button>
-                </div>
-                <button
-                  type="submit"
-                  className="btn btn-success mt-3 w-100"
-                  style={{ height: "30vh" }}
-                >
-                  Swipe to Confirm Payment
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-
-        {/* Add Button */}
-        <button
-          className="btn btn-primary rounded-circle position-absolute d-flex justify-content-center align-items-center"
-          style={{ bottom: "20px", right: "20px", width: "60px", height: "60px" }}
-          data-bs-toggle="offcanvas"
-          data-bs-target="#offcanvasOne"
-        >
-          ADD
-        </button>
+        <GestureButton
+          onTap={() => startListening("command")}
+          onDoubleTap={handleDoubleTap}
+          onSwipe={handleSwipe}
+        />
       </div>
     </div>
   );
