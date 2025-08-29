@@ -58,7 +58,7 @@ console.log("transferRoutes:", typeof transferRoutes);
 console.log("authRouter:", typeof authRouter);
 
 // --- API routes ---
-// app.use("/api/auth", authRouter);
+app.use("/api/webauth", authRouter);
 app.use("/api/auth", magicLinkRoutes);
 app.use("/api/webauthn", webauthnRoutes);
 app.use("/api/pin", pinRoutes);

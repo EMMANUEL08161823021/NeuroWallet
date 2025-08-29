@@ -40,7 +40,7 @@ router.post("/generate-registration-options", async (req, res) => {
 
   const options = generateRegistrationOptions({
     rpName: "NeuroWallet",
-    rpID: "localhost",
+    rpID: "https://neuro-wallet.vercel.app/",
     userID: userIDBuffer,
     userName: email,
     userDisplayName: email,
