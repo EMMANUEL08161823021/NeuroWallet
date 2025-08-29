@@ -1,55 +1,39 @@
-GET http://localhost:9000
-
-###
-
-GET http://localhost:3000/todos/67d2e8a11012996013aa13c6
-
-
-###
-
-POST http://localhost:9000/api/auth/generate-registration-options
+POST http://localhost:9000/api/pin/set
 Content-Type: application/json
 
-{
-  "email": "test@example.com"
-}
-
-###
-
-POST http://localhost:9000/api/auth/login
-Content-Type: application/json
-
-{
-    "email": "emmanueloguntolu48@gmail.com",
-    "password": "123456"
-}
-
-
-###
-
-GET http://localhost:9000/api/auth/me
-
-
-###
-
-
-POST http://localhost:9000/api/transactions
-Content-Type: application/json
-
-
-{
-  "sender": "686873b837e5d1b14ad03ada",
-  "recipient": "6868757637e5d1b14ad03ade",
-  "amount": 15075
+{  
+    "email": "demo@neurowallet.test",
+    "pin": "123456"
 }
 
 ###
 
 
-GET http://localhost:9000/api/transactions/686873b837e5d1b14ad03ada
+POST http://localhost:9000/api/pin/login
 Content-Type: application/json
 
+{  
+    "email": "demo@neurowallet.com",
+    "pin": "123456"
+}
 
+
+###
+
+
+
+POST http://localhost:9000/api/pin/login
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGIxMGQxNTk5NTQ0OGQ0Y2RkMjkxMjciLCJlbWFpbCI6ImRlbW9AbmV1cm93YWxsZXQuY29tIiwicmVjZW50QXV0aEF0IjoiMjAyNS0wOC0yOVQwMjoyMToxNC4zNTRaIiwiaWF0IjoxNzU2NDM0MDc0LCJleHAiOjE3NTY0MzU4NzR9.8secl6emBz4jwjZWzjLVQ4YmVG8e2UlJf66v5Pig8VI
+Content-Type: application/json
+Idempotency-Key: transfer-001
+
+{
+    "fromAccountId": "68b10d15995448d4cdd29127",
+    "toAccountNumber": "1002003012", 
+    "amount": "2000", 
+    "memo": "Food"
+}
 
 
 

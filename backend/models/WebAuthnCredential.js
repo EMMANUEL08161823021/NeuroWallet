@@ -1,4 +1,6 @@
-import { Schema, model, Types } from "mongoose";
+const { Schema, model, Types } = require("mongoose");
+
+
 const cred = new Schema({
   userId: { type: Types.ObjectId, ref: "User", index: true, required: true },
   credentialID: { type: String, unique: true, index: true, required: true }, // base64url
@@ -6,4 +8,6 @@ const cred = new Schema({
   counter: { type: Number, default: 0 },
   transports: [String]
 }, { timestamps: true });
-export default model("WebAuthnCredential", cred);
+
+
+module.exports = model("WebAuthnCredential", cred);

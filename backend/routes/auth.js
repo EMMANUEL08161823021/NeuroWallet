@@ -39,7 +39,7 @@ router.post("/generate-registration-options", async (req, res) => {
   console.log("userID Buffer hex:", userIDBuffer.toString("hex"));
 
   const options = generateRegistrationOptions({
-    rpName: "My App",
+    rpName: "NeuroWallet",
     rpID: "localhost",
     userID: userIDBuffer,
     userName: email,

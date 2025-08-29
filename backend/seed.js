@@ -1,73 +1,32 @@
-const dotenv = require('dotenv');
-dotenv.config();
-const mongoose = require('mongoose');
-const Product = require('./models/Product');
+// scripts/seed.js
+require("dotenv").config();
+const mongoose = require("mongoose");
+const User = require("./models/User");
+const Account = require("./models/Account");
 
-// Database Connection
-mongoose.connect(process.env.MONGO_URI, {
-    dbName: 'gadgetDb',
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error(err));
+(async () => {
+  await mongoose.connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017", { dbName: "NeuroWallet" });
 
-const seedProducts = async () => {
-    try {
-        const count = await Product.countDocuments();
-        if (count > 0) {
-            console.log('Database already seeded, skipping...');
-            process.exit();
-        }
-        await Product.deleteMany();
-        await Product.insertMany([
-            {
-                name: "Galaxy S24",
-                weight: "168g",
-                height: "147mm",
-                battery: "4000mAh",
-                capacity: "128GB",
-                amount: 799,
-                category: "Phones",
-                image: "https://example.com/galaxy-s24.jpg"
-            },
-            {
-                name: "MacBook Pro",
-                weight: "1.4kg",
-                height: "15.5mm",
-                battery: "66.5Wh",
-                capacity: "512GB",
-                amount: 1299,
-                category: "Laptops",
-                image: "https://example.com/macbook.jpg"
-            },
-            {
-                name: "iPad Air",
-                weight: "461g",
-                height: "247.6mm",
-                battery: "28.6Wh",
-                capacity: "64GB",
-                amount: 599,
-                category: "Ipads",
-                image: "https://example.com/ipad.jpg"
-            },
-            {
-                name: "Apple Watch Series 9",
-                weight: "31.9g",
-                height: "45mm",
-                battery: "308mAh",
-                capacity: "64GB",
-                amount: 399,
-                category: "Watches",
-                image: "https://example.com/watch.jpg"
-            }
-        ]);
-        console.log('Database seeded successfully with products');
-        process.exit();
-    } catch (err) {
-        console.error('Seeding error:', err);
-        process.exit(1);
-    }
-};
+  const email = "emmanueloguntolu48@gmail.com";
+  let user = await User.findOne({ email });
+  if (!user) {
+    user = new User({ email, name: "Demo User" });
+    await user.setPIN("000000"); // demo PIN
+    await user.save();
+  }
 
-seedProducts();
+  let acct = await Account.findOne({ userId: user._id });
+  if (!acct) {
+    acct = await Account.create({
+      userId: user._id,
+      number: "1002003012",
+      currency: "NGN",
+      balance: 2500,
+      type: "WALLET",
+      label: "Main Wallet",
+    });
+  }
+
+  console.log("Seeded:", { user: { id: user.id, email }, account: { id: acct.id, number: acct.number }});
+  await mongoose.disconnect();
+})();
