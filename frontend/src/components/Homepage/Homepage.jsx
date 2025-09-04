@@ -58,6 +58,7 @@ const Homepage = () => {
     { name: "Richard", provider: "Kuda", account: "2233445566" },
     { name: "Emeka", provider: "Palmpay", account: "9988776655" },
     { name: "Lashe", provider: "U B A", account: "5566778899" },
+    { name: "Drizzy", provider: "Palmpay", account: "5526778899" },
   ];
 
   const filteredBeneficiaries = beneficiaries.filter((b) =>

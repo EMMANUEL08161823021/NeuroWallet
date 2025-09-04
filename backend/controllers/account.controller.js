@@ -4,12 +4,44 @@
 const Account = require("../models/Account");
 const Transaction = require("../models/Transaction");
 
-// GET /api/accounts
-async function listAccounts(req, res, next) {
+
+
+// POST /api/create/accounts
+async function createAccount(req, res) {
   try {
-    const accounts = await Account.find({ userId: req.user.sub });
-    res.json({ accounts });
-  } catch (err) { next(err); }
+
+    const {number, currency, balance, type, pin, label} = req.user;
+
+    let acct = await Account.findOne({ userId: user._id });
+    if (!acct) {
+      acct = await Account.create({
+        userId: user._id,
+        number: number,
+        currency: currency,
+        balance: balance,
+        type: type,
+        label: label,
+        pin: pin
+      });
+    }
+      console.log(req.user);
+    // const accounts = await Account.find({ userId: req.user.sub });
+    // console.log(accounts);
+    // res.json({ accounts });
+  } catch (err) { 
+    console.log(err);
+  }
+}
+// GET /api/accounts
+async function listAccounts(req, res) {
+  try {
+    console.log(req.user);
+    // const accounts = await Account.find({ userId: req.user.sub });
+    // console.log(accounts);
+    // res.json({ accounts });
+  } catch (err) { 
+    console.log(err);
+  }
 }
 
 // GET /api/accounts/:id
@@ -31,4 +63,4 @@ async function listTransactions(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listAccounts, getAccount, listTransactions };
+module.exports = { createAccount, listAccounts, getAccount, listTransactions };

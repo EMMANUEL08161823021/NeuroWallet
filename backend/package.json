@@ -13,6 +13,7 @@
   "dependencies": {
     "@simplewebauthn/browser": "^13.1.0",
     "@simplewebauthn/server": "^13.1.2",
+    "axios": "^1.11.0",
     "base64url": "^3.0.1",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",

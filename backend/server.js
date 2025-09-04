@@ -19,7 +19,7 @@ const pinRoutes = require("./routes/pin.routes");
 const accountRoutes = require("./routes/account.routes");
 const transferRoutes = require("./routes/transfer.routes");
 const magicLinkRoutes = require("./routes/magic.routes");
-const authRouter = require("./routes/auth"); // your existing auth router
+// const authRouter = require("./routes/auth"); // your existing auth router
 
 const app = express();
 
@@ -58,7 +58,7 @@ console.log("transferRoutes:", typeof transferRoutes);
 console.log("authRouter:", typeof authRouter);
 
 // --- API routes ---
-app.use("/api/webauth", authRouter);
+// app.use("/api/webauth", authRouter);
 app.use("/api/auth", magicLinkRoutes);
 app.use("/api/webauthn", webauthnRoutes);
 app.use("/api/pin", pinRoutes);

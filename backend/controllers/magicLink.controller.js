@@ -1,3 +1,5 @@
+const dotenv = require('dotenv')
+dotenv.config();
 // optional email-based sign-in
 
 

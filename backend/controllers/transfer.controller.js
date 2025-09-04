@@ -26,8 +26,8 @@ async function createTransfer(req, res, next) {
       await to.save({ session });
       await Transaction.insertMany(
         [
-            { accountId: from._id, type: "DEBIT",  amount, memo, counterparty: to.number,   ref },
-            { accountId: to._id,   type: "CREDIT", amount, memo, counterparty: from.number, ref },
+          { accountId: from._id, type: "DEBIT",  amount, memo, counterparty: to.number,   ref },
+          { accountId: to._id,   type: "CREDIT", amount, memo, counterparty: from.number, ref },
         ],
         { session, ordered: true } // <-- important
         );

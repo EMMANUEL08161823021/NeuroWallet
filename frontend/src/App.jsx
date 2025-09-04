@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 
 import Search from './components/Search';
+import LandingPage from './components/LandingPage/LandingPage';
 
 
 function App() {
@@ -42,10 +43,11 @@ function App() {
 
   return (
     <>
-      <Navbar/>
+      {/* <Navbar/> */}
       <Routes>
-        <Route path="/" element={<Login/>} />
-        <Route path="/home" element={<Homepage />} />
+        <Route path="/" element={<LandingPage/>} />
+        <Route path="/login" element={<Login/>} />
+        <Route path="/dashboard" element={<Homepage />} />
         <Route path="/cart" element={<Cart/>} />
         <Route path="/register" element={<Register/>} />
         <Route path="/search" element={<Search />} />
