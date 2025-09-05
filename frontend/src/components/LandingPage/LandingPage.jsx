@@ -1,6 +1,8 @@
 // LandingPage.jsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { AlertTriangle, Lock, EyeOff, UserPlus, Fingerprint, Wallet } from "lucide-react";
 // import { Button } from "@/components/ui/button";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // import { Input } from "@/components/ui/input";
@@ -253,111 +255,281 @@ const LandingPage = () => {
 
       <br/>
       <br/>
-      <section className="py-4">
-        <div className="flex flex-col justify-center border ">
-          <h1 className="text-2xl font-bold text-center">Why Traditional Banking Apps Fail</h1>
-          <p className="text-sm font-medium text-center">Millions struggle with inaccessible financial services that weren't designed with inclusivity in mind</p>
-        
-          <div className="grid md:grid-cols-3 grid-rows-1 gap-4 p-6">
-            <div className="bg-blue-500 text-white p-6 rounded-lg shadow">
-              <h2>Poor Accessibility</h2>
-              <p>No screen reader support, tiny buttons, low contrast makes banking impossible for visually impaired users</p>
+    <section className="py-12 px-6 bg-gray-50">
+      <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+        {/* Title */}
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-3xl md:text-4xl font-extrabold text-gray-900"
+        >
+          Why Traditional Banking Apps Fail
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="mt-3 text-gray-600 max-w-2xl"
+        >
+          Millions struggle with inaccessible financial services that weren’t designed with inclusivity in mind.
+        </motion.p>
+
+        {/* Grid Cards */}
+        <div className="grid md:grid-cols-3 gap-6 mt-10 w-full">
+          {/* Card 1 */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="bg-blue-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+          >
+            <AlertTriangle className="h-10 w-10 mb-3" />
+            <h2 className="text-xl font-semibold">Poor Accessibility</h2>
+            <p className="mt-2 text-sm">
+              No screen reader support, tiny buttons, and low contrast make banking impossible for visually impaired users.
+            </p>
+          </motion.div>
+
+          {/* Card 2 */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="bg-green-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+          >
+            <Lock className="h-10 w-10 mb-3" />
+            <h2 className="text-xl font-semibold">Complex Authentication</h2>
+            <p className="mt-2 text-sm">
+              Overly complex passwords and multi-step verification create barriers for users with motor limitations.
+            </p>
+          </motion.div>
+
+          {/* Card 3 */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="bg-purple-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+          >
+            <EyeOff className="h-10 w-10 mb-3" />
+            <h2 className="text-xl font-semibold">Confusing Interface</h2>
+            <p className="mt-2 text-sm">
+              Cluttered designs with no voice navigation or alternative input methods exclude hearing-impaired users.
+            </p>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+
+
+      <br/>
+      <br/>
+      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+            Meet <span className="text-blue-600">NeuroWallet</span>
+          </h1>
+          <p className="text-lg text-gray-600 mb-12 max-w-2xl mx-auto">
+            A new way to bank — built from the ground up to be inclusive, 
+            accessible, and empowering for everyone. No barriers, no compromises.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Card 1 */}
+            <div className="bg-white p-8 rounded-2xl shadow hover:shadow-lg transition">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Accessibility First</h2>
+              <p className="text-gray-600">
+                Full screen reader support, large touch targets, and 
+                high-contrast design so everyone can manage money independently.
+              </p>
             </div>
-            <div className="bg-green-500 text-white p-6 rounded-lg shadow">
-              <h2>Complex Authentication</h2>
-              <p>Overly complex passwords and multi-step verification create barriers for users with motor limitations</p>
+
+            {/* Card 2 */}
+            <div className="bg-white p-8 rounded-2xl shadow hover:shadow-lg transition">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0-1.105.895-2 2-2s2 .895 2 2v1h-4v-1zM7 13h1v-1a4 4 0 118 0v1h1a2 2 0 012 2v5H5v-5a2 2 0 012-2z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Simplified Security</h2>
+              <p className="text-gray-600">
+                Login with biometrics, passkeys, or a single secure tap. 
+                Safe authentication without frustrating steps.
+              </p>
             </div>
-            <div className="bg-purple-500 text-white p-6 rounded-lg shadow">
-              <h2>Confusing Interface</h2>
-              <p>Cluttered designs with no voice navigation or alternative input methods exclude hearing impaired users</p>
+
+            {/* Card 3 */}
+            <div className="bg-white p-8 rounded-2xl shadow hover:shadow-lg transition">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-purple-100 mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m0 4v12m6-4l6 4V5l-6 4z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Intuitive Experience</h2>
+              <p className="text-gray-600">
+                Clean design with voice navigation, haptic cues, and 
+                alternative input support — banking that adapts to you.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      <br/>
-      <br/>
-      <section className="py-4">
-        <div className="flex flex-col justify-center border ">
-          <h1 className="text-2xl font-bold text-center">Meet NeuroWallet</h1>
-          <p className="text-sm font-medium text-center">The first truly accessible banking platform designed from the ground up for users with disabilities</p>
-        
-          <div className="grid md:grid-cols-3 grid-rows-1 gap-4 p-6">
-            <div className="bg-blue-500 text-white p-6 rounded-lg shadow">
-              <h2>Poor Accessibility</h2>
-              <p>No screen reader support, tiny buttons, low contrast makes banking impossible for visually impaired users</p>
-            </div>
-            <div className="bg-green-500 text-white p-6 rounded-lg shadow">
-              <h2>Complex Authentication</h2>
-              <p>Overly complex passwords and multi-step verification create barriers for users with motor limitations</p>
-            </div>
-            <div className="bg-purple-500 text-white p-6 rounded-lg shadow">
-              <h2>Confusing Interface</h2>
-              <p>Cluttered designs with no voice navigation or alternative input methods exclude hearing impaired users</p>
-            </div>
-          </div>
-        </div>
-      </section>
 
 
       {/* How it works */}
       <br/>
       <br/>
-      <section className="py-4">
-        <div className="flex flex-col justify-center border ">
-          <h1 className="text-2xl font-bold text-center">Key Features</h1>
-          <p className="text-sm font-medium text-center">Get started in three simple steps</p>
-        
-          <div className="grid md:grid-cols-2 grid-rows-2 gap-4 p-6">
-            <div className="text-black text-left p-6 rounded-lg shadow">
-              <div className="bg-blue-950 p-3 text-white rounded-md">Step 1</div>
-              <h2>Biometric Login</h2>
-              <p>Create your account with just an email address. No complex forms or unnecessary barriers.</p>
+      <section className="py-16 bg-white">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+            Key <span className="text-blue-600">Features</span>
+          </h1>
+          <p className="text-lg text-gray-600 mb-12 max-w-2xl mx-auto">
+            Get started in just a few steps — designed to be simple, secure, and accessible for everyone.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-8 text-left">
+            {/* Step 1 */}
+            <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                  Step 1
+                </span>
+                <h2 className="text-xl font-semibold text-gray-800">Biometric Login</h2>
+              </div>
+              <p className="text-gray-600">
+                Create your account with just an email address — no complex forms, 
+                just secure and fast onboarding.
+              </p>
             </div>
-            <div className="text-black text-left p-6 rounded-lg shadow">
-              <div className="bg-blue-950 p-3 text-white rounded-md">Step 2</div>
-              <h2>Voice Commands</h2>
-              <p>Set up biometric authentication, create a PIN, or use voice recognition - whatever works for you.</p>
+
+            {/* Step 2 */}
+            <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                  Step 2
+                </span>
+                <h2 className="text-xl font-semibold text-gray-800">Voice Commands</h2>
+              </div>
+              <p className="text-gray-600">
+                Set up biometrics, create a PIN, or use voice recognition —
+                choose the method that works best for you.
+              </p>
             </div>
-            <div className="text-black text-left p-6 rounded-lg shadow">
-              <div className="bg-blue-950 p-3 text-white rounded-md">Step 3</div>
-              <h2>PIN Fallback</h2>
-              <p>Enjoy secure, accessible banking with voice commands, intuitive design, and full independence.</p>
+
+            {/* Step 3 */}
+            <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                  Step 3
+                </span>
+                <h2 className="text-xl font-semibold text-gray-800">PIN Fallback</h2>
+              </div>
+              <p className="text-gray-600">
+                If biometrics aren’t available, fallback to your personal PIN 
+                for quick and safe access.
+              </p>
             </div>
-            <div className="text-black text-left p-6 rounded-lg shadow">
-              <div className="bg-blue-950 p-3 text-white rounded-md">Step 4</div>
-              <h2>Inclusive Accessibility</h2>
-              <p>Enjoy secure, accessible banking with voice commands, intuitive design, and full independence.</p>
+
+            {/* Step 4 */}
+            <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                  Step 4
+                </span>
+                <h2 className="text-xl font-semibold text-gray-800">Inclusive Accessibility</h2>
+              </div>
+              <p className="text-gray-600">
+                Enjoy a fully accessible experience with voice commands, 
+                intuitive layouts, and screen reader support.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
 
+
       {/* How it works */}
       <br/>
       <br/>
-      <section className="py-4">
-        <div className="flex flex-col justify-center border ">
-          <h1 className="text-2xl font-bold text-center">How its Works</h1>
-          <p className="text-sm font-medium text-center">Get started in three simple steps</p>
-        
-          <div className="grid md:grid-cols-3 grid-rows-1 gap-4 p-6">
-            <div className="text-black text-left p-6 rounded-lg shadow">
-              <div className="bg-blue-950 p-3 text-white rounded-md">Step 1</div>
-              <h2>Sign Up</h2>
-              <p>Create your account with just an email address. No complex forms or unnecessary barriers.</p>
-            </div>
-            <div className="text-black text-left p-6 rounded-lg shadow">
-              <div className="bg-blue-950 p-3 text-white rounded-md">Step 2</div>
-              <h2>Choose Your Login</h2>
-              <p>Set up biometric authentication, create a PIN, or use voice recognition - whatever works for you.</p>
-            </div>
-            <div className="text-black text-left p-6 rounded-lg shadow">
-              <div className="bg-blue-950 p-3 text-white rounded-md">Step 3</div>
-              <h2>Start Banking</h2>
-              <p>Enjoy secure, accessible banking with voice commands, intuitive design, and full independence.</p>
-            </div>
+      <section className="py-12 px-6 bg-white">
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl md:text-4xl font-extrabold text-gray-900"
+          >
+            How It Works
+          </motion.h1>
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="mt-3 text-gray-600 max-w-2xl"
+          >
+            Get started in three simple steps.
+          </motion.p>
+
+          {/* Steps Grid */}
+          <div className="grid md:grid-cols-3 gap-6 mt-10 w-full">
+            {/* Step 1 */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-gray-50 p-6 rounded-2xl shadow-lg text-left"
+            >
+              <div className="flex items-center mb-4">
+                <div className="bg-blue-900 text-white px-3 py-1 rounded-md text-sm font-semibold">
+                  Step 1
+                </div>
+              </div>
+              <UserPlus className="h-10 w-10 text-blue-900 mb-3" />
+              <h2 className="text-xl font-semibold text-gray-900">Sign Up</h2>
+              <p className="mt-2 text-gray-600 text-sm">
+                Create your account with just an email address. No complex forms or unnecessary barriers.
+              </p>
+            </motion.div>
+
+            {/* Step 2 */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-gray-50 p-6 rounded-2xl shadow-lg text-left"
+            >
+              <div className="flex items-center mb-4">
+                <div className="bg-blue-900 text-white px-3 py-1 rounded-md text-sm font-semibold">
+                  Step 2
+                </div>
+              </div>
+              <Fingerprint className="h-10 w-10 text-blue-900 mb-3" />
+              <h2 className="text-xl font-semibold text-gray-900">Choose Your Login</h2>
+              <p className="mt-2 text-gray-600 text-sm">
+                Set up biometric authentication, create a PIN, or use voice recognition — whatever works for you.
+              </p>
+            </motion.div>
+
+            {/* Step 3 */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-gray-50 p-6 rounded-2xl shadow-lg text-left"
+            >
+              <div className="flex items-center mb-4">
+                <div className="bg-blue-900 text-white px-3 py-1 rounded-md text-sm font-semibold">
+                  Step 3
+                </div>
+              </div>
+              <Wallet className="h-10 w-10 text-blue-900 mb-3" />
+              <h2 className="text-xl font-semibold text-gray-900">Start Banking</h2>
+              <p className="mt-2 text-gray-600 text-sm">
+                Enjoy secure, accessible banking with voice commands, intuitive design, and full independence.
+              </p>
+            </motion.div>
           </div>
         </div>
       </section>

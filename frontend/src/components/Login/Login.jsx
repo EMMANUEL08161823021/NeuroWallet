@@ -3,7 +3,7 @@ import { api } from "../../api/client";
 import { prepPublicKeyOptions, attestationToJSON, assertionToJSON } from "../../utils/webauthn";
 import { useNavigate, Link } from "react-router-dom";
 
-const PASSKEY_BASE = "http://localhost:5173"; // adjust if your router is mounted elsewhere (e.g. "/webauthn")
+const PASSKEY_BASE = "http://localhost:5173/api/webauthn"; // adjust if your router is mounted elsewhere (e.g. "/webauthn")
 
 export default function Login() {
   const [tab, setTab] = useState("login"); // 'login' | 'signup'

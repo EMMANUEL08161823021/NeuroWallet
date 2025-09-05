@@ -17,6 +17,7 @@
     "bootstrap": "^5.3.6",
     "clj-fuzzy": "^0.4.1",
     "dotenv": "^16.5.0",
+    "framer-motion": "^12.23.12",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.542.0",
     "mongoose": "^8.14.1",

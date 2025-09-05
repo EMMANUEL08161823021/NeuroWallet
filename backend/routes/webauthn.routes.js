@@ -52,8 +52,6 @@ router.post("/generate-registration-options", async (req, res) => {
 
 
 
-
-
 // Verify Registration
 router.post("/verify-registration", async (req, res) => {
   const { email, attestationResponse } = req.body;
