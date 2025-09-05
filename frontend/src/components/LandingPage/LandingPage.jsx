@@ -285,9 +285,11 @@ const LandingPage = () => {
 
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-4 pt-4 justify-center lg:justify-start">
-                <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition transform">
-                  Get Started
-                </button>
+                <Link to={"/login"}>
+                  <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition transform">
+                    Get Started
+                  </button>
+                </Link>
                 <button className="px-6 py-3 border border-white/60 rounded-xl font-semibold hover:bg-white/10 hover:scale-105 transition transform">
                   Learn More
                 </button>

@@ -97,7 +97,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 border-2">
       <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl shadow-sm">
         <div className="p-6 border-b border-gray-200">
           <h1 className="text-lg font-semibold">NeuroWallet — Secure Access</h1>
