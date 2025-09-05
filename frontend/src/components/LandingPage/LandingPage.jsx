@@ -1,30 +1,46 @@
 // LandingPage.jsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { AlertTriangle, Lock, EyeOff, UserPlus, Fingerprint, Wallet } from "lucide-react";
-// import { Button } from "@/components/ui/button";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Input } from "@/components/ui/input";
-// import { Badge } from "@/components/ui/badge";
-// import { AccountCard } from "@/components/AccountCard";
-// import { TransactionHistory } from "@/components/TransactionHistory";
-// import { VoiceInput } from "@/components/VoiceInput";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, Lock, CreditCard, ChevronLeft, ChevronRight, ChevronDown, EyeOff, UserPlus, Fingerprint, Wallet, Mic, Eye } from "lucide-react";
 import {
   Accessibility,
   Shield,
-  Mic,
-  Eye,
+  // Eye,
   Send,
   Plus,
-  CreditCard,
+  
   Settings,
   HelpCircle,
   Menu,
 } from "lucide-react";
 
+const screenshots = [
+  { src: "/images/dashboard.png", caption: "Clean & Accessible Dashboard" },
+  { src: "/images/transfer.png", caption: "Seamless Money Transfers" },
+  { src: "/images/voice-command.png", caption: "Voice Command Navigation" },
+];
 
-import { ChevronDown } from "lucide-react";
+const features = [
+  {
+    icon: <Mic className="h-8 w-8 text-blue-600" />,
+    title: "Voice-to-Text Transfers",
+    description:
+      "Send and receive money using your voice. NeuroWallet makes transactions easy for users with limited mobility.",
+  },
+  {
+    icon: <Eye className="h-8 w-8 text-green-600" />,
+    title: "Screen-Reader Friendly",
+    description:
+      "Our high-contrast design and ARIA support ensure smooth navigation for visually impaired users.",
+  },
+  {
+    icon: <Fingerprint className="h-8 w-8 text-purple-600" />,
+    title: "Multi-Modal Login",
+    description:
+      "Choose between biometrics, PIN, or voice login — empowering everyone to bank their own way.",
+  },
+];
 
 const faqs = [
   {
@@ -54,7 +70,15 @@ const faqs = [
 const LandingPage = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [transferAmount, setTransferAmount] = useState("");
-    const [openIndex, setOpenIndex] = useState(null);
+  const [openIndex, setOpenIndex] = useState(null);
+
+  const [current, setCurrent] = useState(0);
+
+  const prevSlide = () =>
+    setCurrent((prev) => (prev === 0 ? screenshots.length - 1 : prev - 1));
+
+  const nextSlide = () =>
+    setCurrent((prev) => (prev === screenshots.length - 1 ? 0 : prev + 1));
   // const { toast } = useToast();
 
   // Mock data - in real app, this would come from API
@@ -169,156 +193,183 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Header */}
-      <header className="bg-card border-b border-border shadow-sm">
+      <header className="fixed top-0 left-0 w-full bg-white border-b border-gray-200 shadow-sm z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between border items-center h-16">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo + Brand */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-hover rounded-lg flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-primary-foreground" />
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-foreground">NeuroWallet</h1>
+                <h1 className="text-xl font-bold text-gray-900">NeuroWallet</h1>
               </div>
-              {/* <Badge variant="secondary" className="text-xs"> */}
+              <div className="flex items-center text-sm text-gray-500">
                 <Accessibility className="h-3 w-3 mr-1" />
                 Accessible Banking
-              {/* </Badge> */}
+              </div>
             </div>
 
+            {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-4">
-              <button variant="ghost" size="sm">
+              <button className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition">
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </button>
-              <button variant="ghost" size="sm">
+              <button className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition">
                 <HelpCircle className="h-4 w-4 mr-2" />
                 Help
               </button>
               <Link to="/login">
-                <button variant="outline" size="sm">
+                <button className="flex items-center text-sm border border-blue-600 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition">
                   <Shield className="h-4 w-4 mr-2" />
                   Secure Login
                 </button>
               </Link>
             </nav>
 
-            <button variant="ghost" size="sm" className="md:hidden">
-              <Menu className="h-5 w-5" />
+            {/* Mobile Menu Icon */}
+            <button className="md:hidden p-2 rounded-lg hover:bg-gray-100">
+              <Menu className="h-5 w-5 text-gray-700" />
             </button>
           </div>
         </div>
       </header>
 
+      <br/>
+      {/* <br/> */}
+
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-primary via-primary-hover to-accent text-primary-foreground py-16">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-20 overflow-hidden">
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40"></div>
+
+        {/* Decorative blurred gradient circle */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
-                Banking for <span className="text-accent-foreground">Everyone</span>
+            {/* Left Text Section */}
+            <div className="space-y-8 text-center lg:text-left">
+              <h1 className="text-4xl lg:text-6xl font-extrabold leading-tight">
+                Banking for{" "}
+                <span className="bg-gradient-to-r from-yellow-300 via-pink-300 to-red-400 bg-clip-text text-transparent">
+                  Everyone
+                </span>
               </h1>
-              <p className="text-xl opacity-90 leading-relaxed">
-                Experience accessible digital banking designed for users with visual, hearing, and motor <br/>challenges. Banking should be simple and inclusive for all.
+              <p className="text-lg lg:text-xl text-gray-200 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                Experience accessible digital banking designed for users with
+                visual, hearing, and motor challenges. <br />
+                Banking should be simple, secure, and inclusive for all.
               </p>
 
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
+              {/* Feature Highlights */}
+              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
                   <Accessibility className="h-5 w-5" />
-                  <span>Accessible Design</span>
+                  <span className="text-sm font-medium">Accessible Design</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
                   <Mic className="h-5 w-5" />
-                  <span>Voice Commands</span>
+                  <span className="text-sm font-medium">Voice Commands</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
                   <Shield className="h-5 w-5" />
-                  <span>Secure Authentication</span>
+                  <span className="text-sm font-medium">
+                    Secure Authentication
+                  </span>
                 </div>
               </div>
 
-              <div className="pt-4">
-                {/* <VoiceInput onVoiceCommand={handleVoiceCommand} /> */}
+              {/* CTA Buttons */}
+              <div className="flex flex-wrap gap-4 pt-4 justify-center lg:justify-start">
+                <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition transform">
+                  Get Started
+                </button>
+                <button className="px-6 py-3 border border-white/60 rounded-xl font-semibold hover:bg-white/10 hover:scale-105 transition transform">
+                  Learn More
+                </button>
               </div>
             </div>
 
-            <div className="lg:flex justify-center hidden">
+            {/* Right Image Section */}
+            <div className="relative hidden lg:flex justify-center">
               <img
-                // src={heroImage}
+                src="https://images.unsplash.com/photo-1581091215367-59ab6d1bbf4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=900&q=80"
                 alt="Diverse people using accessible banking technology"
-                className="rounded-2xl shadow-2xl max-w-full h-auto"
+                className="rounded-3xl shadow-2xl border-4 border-white/20 hover:scale-105 transition-transform duration-500"
               />
             </div>
           </div>
         </div>
       </section>
 
-      <br/>
-      <br/>
-    <section className="py-12 px-6 bg-gray-50">
-      <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
-        {/* Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl md:text-4xl font-extrabold text-gray-900"
-        >
-          Why Traditional Banking Apps Fail
-        </motion.h1>
-
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-          className="mt-3 text-gray-600 max-w-2xl"
-        >
-          Millions struggle with inaccessible financial services that weren’t designed with inclusivity in mind.
-        </motion.p>
-
-        {/* Grid Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-10 w-full">
-          {/* Card 1 */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="bg-blue-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+      <section className="py-12 px-6 bg-gray-50">
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl md:text-4xl font-extrabold text-gray-900"
           >
-            <AlertTriangle className="h-10 w-10 mb-3" />
-            <h2 className="text-xl font-semibold">Poor Accessibility</h2>
-            <p className="mt-2 text-sm">
-              No screen reader support, tiny buttons, and low contrast make banking impossible for visually impaired users.
-            </p>
-          </motion.div>
+            Why Traditional Banking Apps Fail
+          </motion.h1>
 
-          {/* Card 2 */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="bg-green-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="mt-3 text-gray-600 max-w-2xl"
           >
-            <Lock className="h-10 w-10 mb-3" />
-            <h2 className="text-xl font-semibold">Complex Authentication</h2>
-            <p className="mt-2 text-sm">
-              Overly complex passwords and multi-step verification create barriers for users with motor limitations.
-            </p>
-          </motion.div>
+            Millions struggle with inaccessible financial services that weren’t designed with inclusivity in mind.
+          </motion.p>
 
-          {/* Card 3 */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="bg-purple-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
-          >
-            <EyeOff className="h-10 w-10 mb-3" />
-            <h2 className="text-xl font-semibold">Confusing Interface</h2>
-            <p className="mt-2 text-sm">
-              Cluttered designs with no voice navigation or alternative input methods exclude hearing-impaired users.
-            </p>
-          </motion.div>
+          {/* Grid Cards */}
+          <div className="grid md:grid-cols-3 gap-6 mt-10 w-full">
+            {/* Card 1 */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-blue-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+            >
+              <AlertTriangle className="h-10 w-10 mb-3" />
+              <h2 className="text-xl font-semibold">Poor Accessibility</h2>
+              <p className="mt-2 text-sm">
+                No screen reader support, tiny buttons, and low contrast make banking impossible for visually impaired users.
+              </p>
+            </motion.div>
+
+            {/* Card 2 */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-green-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+            >
+              <Lock className="h-10 w-10 mb-3" />
+              <h2 className="text-xl font-semibold">Complex Authentication</h2>
+              <p className="mt-2 text-sm">
+                Overly complex passwords and multi-step verification create barriers for users with motor limitations.
+              </p>
+            </motion.div>
+
+            {/* Card 3 */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-purple-600 text-white p-6 rounded-2xl shadow-lg flex flex-col items-center"
+            >
+              <EyeOff className="h-10 w-10 mb-3" />
+              <h2 className="text-xl font-semibold">Confusing Interface</h2>
+              <p className="mt-2 text-sm">
+                Cluttered designs with no voice navigation or alternative input methods exclude hearing-impaired users.
+              </p>
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-
+      {/* Meet NeuroWallet */}
       <br/>
       <br/>
       <section className="py-16 bg-gradient-to-b from-white to-gray-50">
@@ -379,7 +430,7 @@ const LandingPage = () => {
 
 
 
-      {/* How it works */}
+      {/* Key Features */}
       <br/>
       <br/>
       <section className="py-16 bg-white">
@@ -447,6 +498,50 @@ const LandingPage = () => {
                 intuitive layouts, and screen reader support.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Accessibility First, Always*/}
+
+      <br/>
+      <br/>
+      <section className="py-16 bg-white">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          {/* Section Heading */}
+          <motion.h2
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl md:text-4xl font-extrabold text-gray-900"
+          >
+            Accessibility First, Always
+          </motion.h2>
+          <p className="mt-3 text-gray-600 text-lg">
+            NeuroWallet is built for everyone — inclusive, adaptive, and empowering.
+          </p>
+
+          {/* Feature Grid */}
+          <div className="mt-10 grid md:grid-cols-3 gap-8">
+            {features.map((feature, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: idx * 0.2 }}
+                className="p-6 bg-gray-50 rounded-xl shadow hover:shadow-lg transition"
+              >
+                <div className="flex items-center justify-center mb-4">
+                  {feature.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-gray-600 text-sm">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -533,38 +628,124 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
+      <br/>
+      <br/>
 
-      <br/>
-      <br/>
-      {/*Frequently Asked Question  */}
-      <section className="max-w-3xl mx-auto px-6 ">
-        <h2 className="text-3xl font-bold text-center mb-8">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-4">
-          {faqs.map((faq, idx) => (
-            <div
-              key={idx}
-              className="border border-gray-200 rounded-lg shadow-sm"
-            >
-              <button
-                className="w-full flex justify-between items-center px-4 py-3 text-left"
-                onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          {/* Section Title */}
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
+            Screenshots / Demo
+          </h2>
+          <p className="text-gray-600 mb-10">
+            A quick look at how NeuroWallet empowers inclusive, secure banking
+          </p>
+
+          {/* Carousel Container */}
+          <div className="relative w-full max-w-3xl mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current}
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                transition={{ duration: 0.5 }}
+                className="rounded-xl overflow-hidden shadow-lg bg-white"
               >
-                <span className="font-medium text-gray-800">
-                  {faq.question}
-                </span>
-                <ChevronDown
-                  className={`h-5 w-5 text-gray-500 transition-transform ${
-                    openIndex === idx ? "rotate-180" : ""
-                  }`}
+                <img
+                  src={screenshots[current].src}
+                  alt={screenshots[current].caption}
+                  className="w-full h-[400px] object-cover"
                 />
-              </button>
-              {openIndex === idx && (
-                <div className="px-4 pb-4 text-gray-600">{faq.answer}</div>
-              )}
-            </div>
-          ))}
+                <div className="p-4 bg-gray-100 text-gray-800 font-medium text-sm">
+                  {screenshots[current].caption}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-gray-100"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-800" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-gray-100"
+            >
+              <ChevronRight className="w-6 h-6 text-gray-800" />
+            </button>
+          </div>
+
+          {/* Dots Indicator */}
+          <div className="flex justify-center mt-6 space-x-2">
+            {screenshots.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrent(idx)}
+                className={`w-3 h-3 rounded-full transition ${
+                  idx === current ? "bg-blue-600" : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/*Frequently Asked Question  */}
+      <section className="py-16 px-6 bg-gray-50">
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Title */}
+          <motion.h2
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl md:text-4xl font-extrabold text-gray-900"
+          >
+            Frequently Asked Questions
+          </motion.h2>
+
+          {/* FAQ List */}
+          <div className="mt-10 space-y-4 text-left">
+            {faqs.map((faq, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1, duration: 0.5 }}
+                className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
+              >
+                <button
+                  className="w-full flex justify-between items-center px-5 py-4 text-left focus:outline-none hover:bg-gray-50"
+                  onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
+                >
+                  <span className="font-medium text-gray-800">
+                    {faq.question}
+                  </span>
+                  <ChevronDown
+                    className={`h-6 w-6 text-gray-500 transition-transform duration-300 ${
+                      openIndex === idx ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {openIndex === idx && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="px-5 pb-4 text-gray-600 text-sm leading-relaxed"
+                    >
+                      {faq.answer}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
