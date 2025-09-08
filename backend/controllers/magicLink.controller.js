@@ -17,6 +17,9 @@ const MAGIC_TTL_MIN = 10;
 async function requestMagicLink(req, res, next) {
   try {
     const { email, clientNonce } = req.body;
+    
+    console.log(req.body);
+
     const user = await User.findOne({ email }); // don't reveal existence
 
     const raw = crypto.randomBytes(32).toString("base64url");
@@ -33,7 +36,7 @@ async function requestMagicLink(req, res, next) {
     });
 
     if (user) {
-      const url = new URL(process.env.APP_URL + "/auth/magic");
+      const url = new URL("http://localhost:5173//auth/magic");
       url.searchParams.set("token", raw);
       if (clientNonce) url.searchParams.set("nonce", clientNonce);
       url.searchParams.set("redirect", "/dashboard");

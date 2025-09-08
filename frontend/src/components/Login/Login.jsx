@@ -49,11 +49,11 @@ export default function Login() {
   const onPasskeyRegister = async () => {
     setBusy(true); setMsg(null);
     try {
-      const { data: options } = await api.post(`${PASSKEY_BASE}/generate-registration-options`, { email });
+      const { data: options } = await api.post(`http://localhost:9000/api/webauthn/generate-registration-options`, { email });
       const publicKey = prepPublicKeyOptions(options);
       const cred = await navigator.credentials.create({ publicKey });
       const att = attestationToJSON(cred);
-      const { data: verify } = await api.post(`${PASSKEY_BASE}/verify-registration`, {
+      const { data: verify } = await api.post(`http://localhost:9000/api/webauthn/verify-registration`, {
         email, attestationResponse: att,
       });
       if (verify?.verified) {

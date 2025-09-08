@@ -15,8 +15,10 @@ const base64url = require('base64url');
 
 
 // Generate Registration Options
-router.post("/generate-registration-options", async (req, res) => {
+router.post("/generate-registration-options", async (req, res) => { 
   const { email } = req.body;
+
+  console.log(req.body);
 
   let user = await User.findOne({ email });
   let userIDBuffer;
@@ -39,16 +41,17 @@ router.post("/generate-registration-options", async (req, res) => {
 
   const options = generateRegistrationOptions({
     rpName: "NeuroWallet",
-    rpID: "https://neuro-wallet.vercel.app/",
+    rpID: "localhost",  // ⚠️ remove http:// and port, should just be hostname
     userID: userIDBuffer,
     userName: email,
     userDisplayName: email,
   });
 
-  req.session.currentChallenge = options.challenge;
+  req.session.currentChallenge = options.challenge; // ✅ now works
 
   res.json(options);
 });
+
 
 
 

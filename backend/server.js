@@ -2,7 +2,7 @@
 
 const dotenv = require("dotenv");
 dotenv.config();
-
+const session = require("express-session");
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
@@ -38,15 +38,15 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
-// --- OPTIONAL: only if you truly need server-side sessions (not required for JWT auth) ---
-// app.use(
-//   session({
-//     secret: process.env.SESSION_SECRET || "change_me",
-//     resave: false,
-//     saveUninitialized: false,
-//     cookie: { secure: false, sameSite: "lax" },
-//   })
-// );
+
+app.use(
+  session({
+    secret: "super-secret-key", // change this to a strong random string
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }, // set secure: true if using HTTPS
+  })
+);
 
 // --- Health check ---
 app.get("/health", (_req, res) => res.json({ ok: true }));

@@ -14,6 +14,7 @@ import {
   HelpCircle,
   Menu,
 } from "lucide-react";
+import Hero from "../../assets/hero-img.png";
 
 const screenshots = [
   { src: "/images/dashboard.png", caption: "Clean & Accessible Dashboard" },
@@ -249,10 +250,10 @@ const LandingPage = () => {
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
 
         {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8  h-[80vh]">
+          <div className="flex justify-between w-[100%] text-center border-2 border-red-600 items-start">
             {/* Left Text Section */}
-            <div className="space-y-8 text-center lg:text-left">
+            <div className="space-y-8 text-center w-[45%] border-2 lg:text-left flex flex-col justify-center">
               <h1 className="text-4xl lg:text-6xl font-extrabold leading-tight">
                 Banking for{" "}
                 <span className="bg-gradient-to-r from-yellow-300 via-pink-300 to-red-400 bg-clip-text text-transparent">
@@ -260,8 +261,8 @@ const LandingPage = () => {
                 </span>
               </h1>
               <p className="text-lg lg:text-xl text-gray-200 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Experience accessible digital banking designed for users with
-                visual, hearing, and motor challenges. <br />
+                Experience accessible digital banking designed for users with visual,
+                hearing, and motor challenges. <br />
                 Banking should be simple, secure, and inclusive for all.
               </p>
 
@@ -277,9 +278,7 @@ const LandingPage = () => {
                 </div>
                 <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
                   <Shield className="h-5 w-5" />
-                  <span className="text-sm font-medium">
-                    Secure Authentication
-                  </span>
+                  <span className="text-sm font-medium">Secure Authentication</span>
                 </div>
               </div>
 
@@ -297,14 +296,16 @@ const LandingPage = () => {
             </div>
 
             {/* Right Image Section */}
-            <div className="relative hidden lg:flex justify-center">
+            <div className="border-2 hidden w-[45%] lg:flex justify-center">
               <img
-                src="https://images.unsplash.com/photo-1581091215367-59ab6d1bbf4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=900&q=80"
+                src={Hero}
+                style={{height: '500px', width: '300px'}}
                 alt="Diverse people using accessible banking technology"
                 className="rounded-3xl shadow-2xl border-4 border-white/20 hover:scale-105 transition-transform duration-500"
               />
             </div>
           </div>
+
         </div>
       </section>
 
@@ -448,7 +449,7 @@ const LandingPage = () => {
             {/* Step 1 */}
             <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
               <div className="flex items-center gap-3 mb-4">
-                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                <span className="bg-blue-600 text-white whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-full">
                   Step 1
                 </span>
                 <h2 className="text-xl font-semibold text-gray-800">Biometric Login</h2>
@@ -462,7 +463,7 @@ const LandingPage = () => {
             {/* Step 2 */}
             <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
               <div className="flex items-center gap-3 mb-4">
-                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                <span className="bg-blue-600 text-white whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-full">
                   Step 2
                 </span>
                 <h2 className="text-xl font-semibold text-gray-800">Voice Commands</h2>
@@ -476,7 +477,7 @@ const LandingPage = () => {
             {/* Step 3 */}
             <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
               <div className="flex items-center gap-3 mb-4">
-                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                <span className="bg-blue-600 text-white whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-full">
                   Step 3
                 </span>
                 <h2 className="text-xl font-semibold text-gray-800">PIN Fallback</h2>
@@ -490,7 +491,7 @@ const LandingPage = () => {
             {/* Step 4 */}
             <div className="bg-gray-50 p-8 rounded-2xl shadow hover:shadow-lg transition">
               <div className="flex items-center gap-3 mb-4">
-                <span className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                <span className="bg-blue-600 text-white whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-full">
                   Step 4
                 </span>
                 <h2 className="text-xl font-semibold text-gray-800">Inclusive Accessibility</h2>

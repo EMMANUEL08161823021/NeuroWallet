@@ -1,5 +1,9 @@
 // utils/mailer.js
+
+const dotenv = require('dotenv')
+dotenv.config();
 const nodemailer = require("nodemailer");
+
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,      // smtp.mailtrap.io
