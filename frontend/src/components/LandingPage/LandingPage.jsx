@@ -250,10 +250,10 @@ const LandingPage = () => {
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
 
         {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8  h-[80vh]">
-          <div className="flex justify-between w-[100%] text-center border-2 border-red-600 items-start">
+        <div className="relative max-w-6xl mx-auto px-6 lg:px-8  h-[80vh]">
+          <div className="flex justify-between w-[100%] text-center items-start">
             {/* Left Text Section */}
-            <div className="space-y-8 text-center w-[45%] border-2 lg:text-left flex flex-col justify-center">
+            <div className="space-y-8 text-center w-[100%] lg:w-[50%] lg:text-left flex flex-col justify-center">
               <h1 className="text-4xl lg:text-6xl font-extrabold leading-tight">
                 Banking for{" "}
                 <span className="bg-gradient-to-r from-yellow-300 via-pink-300 to-red-400 bg-clip-text text-transparent">
@@ -296,7 +296,7 @@ const LandingPage = () => {
             </div>
 
             {/* Right Image Section */}
-            <div className="border-2 hidden w-[45%] lg:flex justify-center">
+            <div className="hidden lg:w-[45%] lg:flex justify-center">
               <img
                 src={Hero}
                 style={{height: '500px', width: '300px'}}
