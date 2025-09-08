@@ -73,11 +73,11 @@ export default function Login() {
   const onPasskeyLogin = async () => {
     setBusy(true); setMsg(null);
     try {
-      const { data: options } = await api.post(`${PASSKEY_BASE}/generate-authentication-options`, { email });
+      const { data: options } = await api.post(`http://localhost:9000/api/webauthn/generate-authentication-options`, { email });
       const publicKey = prepPublicKeyOptions(options);
       const assertion = await navigator.credentials.get({ publicKey });
       const auth = assertionToJSON(assertion);
-      const { data: verify } = await api.post(`${PASSKEY_BASE}/verify-authentication`, {
+      const { data: verify } = await api.post(`http://localhost:9000/api/webauthn/verify-authentication`, {
         email, assertionResponse: auth,
       });
       if (verify?.verified) {

@@ -28,18 +28,18 @@ const GestureButton = ({ onTap, onDoubleTap, onSwipe }) => {
     }
   };
 
-  return (
-    <button
-    style={{width: '100%', padding: '40px'}}
-      ref={buttonRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
-      aria-label="Interact with gestures: tap to speak commands, double tap to cancel, swipe to confirm"
-    >
-      Interact
-    </button>
-  );
+  // return (
+  //   <button
+  //   style={{width: '100%', padding: '40px'}}
+  //     ref={buttonRef}
+  //     onTouchStart={handleTouchStart}
+  //     onTouchMove={handleTouchMove}
+  //     className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
+  //     aria-label="Interact with gestures: tap to speak commands, double tap to cancel, swipe to confirm"
+  //   >
+  //     Interact
+  //   </button>
+  // );
 };
 
 const Homepage = () => {
@@ -57,8 +57,7 @@ const Homepage = () => {
     { name: "Heuro", provider: "Opay", account: "1234567890" },
     { name: "Richard", provider: "Kuda", account: "2233445566" },
     { name: "Emeka", provider: "Palmpay", account: "9988776655" },
-    { name: "Lashe", provider: "U B A", account: "5566778899" },
-    { name: "Drizzy", provider: "Palmpay", account: "5526778899" },
+
   ];
 
   const filteredBeneficiaries = beneficiaries.filter((b) =>

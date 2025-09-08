@@ -8,6 +8,7 @@ import Cart from './components/Transaction/Transaction';
 import Register from './components/Register/Register';
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
+import Dashboard from './components/Dashboard/Dashboard';
 
 import Search from './components/Search';
 import LandingPage from './components/LandingPage/LandingPage';
@@ -47,6 +48,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage/>} />
         <Route path="/login" element={<Login/>} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard" element={<Homepage />} />
         <Route path="/cart" element={<Cart/>} />
         <Route path="/register" element={<Register/>} />

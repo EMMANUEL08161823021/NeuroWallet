@@ -1,125 +1,122 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
-const transactionsData = [
-  {
-    id: 1,
-    name: "Emmanuel",
-    amount: 5000,
-    status: "Success",
-    date: "2025-07-15 10:20 AM",
-    provider: "Opay",
-    description: "Rent payment",
-  },
-  {
-    id: 2,
-    name: "Heuro",
-    amount: 3000,
-    status: "Pending",
-    date: "2025-07-14 03:30 PM",
-    provider: "Palmpay",
-    description: "Food delivery",
-  },
-  {
-    id: 3,
-    name: "Richard",
-    amount: 12000,
-    status: "Failed",
-    date: "2025-07-13 09:10 AM",
-    provider: "Kuda",
-    description: "Loan repayment",
-  },
-];
-
-export default function TransactionsPage() {
+export default function Transactions() {
   const [query, setQuery] = useState("");
   const [selectedTxn, setSelectedTxn] = useState(null);
 
-  const filtered = transactionsData.filter((txn) =>
+  const transactions = [
+    {
+      id: 1,
+      name: "Airtime Purchase",
+      date: "2025-09-05",
+      status: "Success",
+      amount: 2000,
+      provider: "MTN",
+      description: "₦2000 airtime purchase",
+    },
+    {
+      id: 2,
+      name: "Electricity Bill",
+      date: "2025-09-04",
+      status: "Failed",
+      amount: 10000,
+      provider: "Ikeja Electric",
+      description: "Token not generated",
+    },
+    {
+      id: 3,
+      name: "Transfer to James",
+      date: "2025-09-03",
+      status: "Pending",
+      amount: 5000,
+      provider: "Bank Transfer",
+      description: "Pending confirmation",
+    },
+  ];
+
+  const filtered = transactions.filter((txn) =>
     txn.name.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
-    <div className="container mt-4">
-      <h2 className="mb-4">Transactions</h2>
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Transactions</h2>
 
+      {/* Search Bar */}
       <input
         type="search"
-        className="form-control mb-3"
+        className="w-full p-2 border rounded-lg mb-4 focus:ring focus:ring-blue-400"
         placeholder="Search by name..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
 
-      {filtered.length === 0 && <p className="text-muted">No transactions found.</p>}
+      {filtered.length === 0 && (
+        <p className="text-gray-500 text-center">No transactions found.</p>
+      )}
 
-      <ul className="list-group">
+      {/* Transaction List */}
+      <ul className="space-y-3">
         {filtered.map((txn) => (
           <li
             key={txn.id}
-            className="list-group-item d-flex justify-content-between align-items-center"
             onClick={() => setSelectedTxn(txn)}
-            role="button"
-            data-bs-toggle="modal"
-            data-bs-target="#txnModal"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition"
           >
             <div>
-              <strong>{txn.name}</strong> <br />
-              <small>{txn.date}</small>
+              <p className="font-semibold">{txn.name}</p>
+              <p className="text-sm text-gray-500">{txn.date}</p>
             </div>
-            <div className="text-end">
+            <div className="text-right">
               <span
-                className={`badge bg-${
+                className={`px-2 py-1 rounded text-xs font-medium ${
                   txn.status === "Success"
-                    ? "success"
+                    ? "bg-green-100 text-green-700"
                     : txn.status === "Failed"
-                    ? "danger"
-                    : "warning text-dark"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-yellow-100 text-yellow-700"
                 }`}
               >
                 {txn.status}
               </span>
-              <div>₦{txn.amount.toLocaleString()}</div>
+              <p className="font-bold">₦{txn.amount.toLocaleString()}</p>
             </div>
           </li>
         ))}
       </ul>
 
-      {/* Modal for Transaction Details */}
-      <div
-        className="modal fade"
-        id="txnModal"
-        tabIndex="-1"
-        aria-labelledby="txnModalLabel"
-        aria-hidden="true"
-      >
-        <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content">
-            {selectedTxn && (
-              <>
-                <div className="modal-header">
-                  <h5 className="modal-title" id="txnModalLabel">
-                    Transaction Details
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                  ></button>
-                </div>
-                <div className="modal-body">
-                  <p><strong>Name:</strong> {selectedTxn.name}</p>
-                  <p><strong>Amount:</strong> ₦{selectedTxn.amount.toLocaleString()}</p>
-                  <p><strong>Date:</strong> {selectedTxn.date}</p>
-                  <p><strong>Provider:</strong> {selectedTxn.provider}</p>
-                  <p><strong>Status:</strong> {selectedTxn.status}</p>
-                  <p><strong>Description:</strong> {selectedTxn.description}</p>
-                </div>
-              </>
-            )}
+      {/* Modal */}
+      {selectedTxn && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Transaction Details</h3>
+              <button
+                onClick={() => setSelectedTxn(null)}
+                className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <p><strong>Name:</strong> {selectedTxn.name}</p>
+              <p><strong>Amount:</strong> ₦{selectedTxn.amount.toLocaleString()}</p>
+              <p><strong>Date:</strong> {selectedTxn.date}</p>
+              <p><strong>Provider:</strong> {selectedTxn.provider}</p>
+              <p><strong>Status:</strong> {selectedTxn.status}</p>
+              <p><strong>Description:</strong> {selectedTxn.description}</p>
+            </div>
+            <div className="mt-6 text-right">
+              <button
+                onClick={() => setSelectedTxn(null)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
