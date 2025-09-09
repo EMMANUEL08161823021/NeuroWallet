@@ -88,7 +88,7 @@ const LandingPage = () => {
       id: "1",
       name: "Main Checking",
       type: "checking",
-      balance: 2450.75,
+      balance: 2460.75,
       accountNumber: "1234567890",
     },
     {
