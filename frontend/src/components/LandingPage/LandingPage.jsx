@@ -289,9 +289,11 @@ const LandingPage = () => {
                     Get Started
                   </button>
                 </Link>
-                <button className="px-6 py-3 border border-white/60 rounded-xl font-semibold hover:bg-white/10 hover:scale-105 transition transform">
-                  Learn More
-                </button>
+                <Link to={"/docs"}>
+                  <button className="px-6 py-3 border border-white/60 rounded-xl font-semibold hover:bg-white/10 hover:scale-105 transition transform">
+                    Learn More
+                  </button>
+                </Link>
               </div>
             </div>
 
