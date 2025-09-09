@@ -4,7 +4,7 @@ import HomePage from "../Homepage/Homepage.jsx";
 import Transactions from "../Transaction/Transaction.jsx";
 import Profile from "../Profile/Profile.jsx";
 import Settings from "../Settings/Settings.jsx";
-import FingerprintConsole from "../FingerPrintConsole";
+import FingerprintConsole from "../FingerprintConsole/FingerprintConsole.jsx";
 
 export default function Dashboard() {
   const [index, setIndex] = useState(0);
