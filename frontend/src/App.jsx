@@ -12,6 +12,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 
 import Search from './components/Search';
 import LandingPage from './components/LandingPage/LandingPage';
+import AccessibleTransfer from './components/AccessibleTransfer/AccessibleTransfer';
 
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
         <Route path="/" element={<LandingPage/>} />
         <Route path="/login" element={<Login/>} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/transfer" element={<AccessibleTransfer />} />
         {/* <Route path="/dashboard" element={<Homepage />} /> */}
         <Route path="/cart" element={<Cart/>} />
         <Route path="/register" element={<Register/>} />

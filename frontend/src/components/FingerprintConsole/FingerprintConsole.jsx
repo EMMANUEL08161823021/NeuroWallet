@@ -56,16 +56,27 @@ export default function FingerprintConsole() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
-      <button
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Voice command: tap to speak. Hold to confirm transfer"
         onMouseDown={handlePress}
         onMouseUp={handleRelease}
         onTouchStart={handlePress}
         onTouchEnd={handleRelease}
-        className="w-32 h-32 rounded-full bg-blue-600 flex items-center justify-center shadow-2xl active:bg-blue-700 transition text-6xl"
-      >
-        🔒
-      </button>
-      <p className="mt-2 text-xl">{status}</p>
+        // onKeyDown={(e) => { if (e.key === "Enter") startListening(); }}
+        className="w-40 h-40 rounded-full bg-blue-600  active:bg-blue-700 flex items-center justify-center shadow-2xl"
+        >
+        <div className="text-center">
+          <div className="text-4xl">🔊</div>
+          <div className="mt-2 text-lg font-semibold">Tap to Speak</div>
+          <div className="text-sm mt-1">Hold to Confirm</div>
+        </div>
+      </div>
+      
+      {/* <p className="mt-2 text-xl">{status}</p> */}
     </div>
   );
 }
+
+      
