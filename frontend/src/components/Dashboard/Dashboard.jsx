@@ -1,6 +1,6 @@
 import { useSwipeable } from "react-swipeable";
 import { useState, useEffect } from "react";
-import HomePage from "../Homepage/HomePage.jsx";
+import HomePage from "../Homepage/Homepage.jsx";
 import Transactions from "../Transaction/Transaction.jsx";
 import Profile from "../Profile/Profile.jsx";
 import Settings from "../Settings/Settings.jsx";
