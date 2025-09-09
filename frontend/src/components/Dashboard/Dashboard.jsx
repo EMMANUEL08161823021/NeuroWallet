@@ -1,9 +1,9 @@
 import { useSwipeable } from "react-swipeable";
 import { useState } from "react";
-import HomePage from "../Homepage/HomePage";
-import Transactions from "../Transaction/Transaction";
-import Profile from "../Profile/Profile";
-import Settings from "../Settings/Settings";
+import HomePage from "../Homepage/Homepage.jsx";
+import Transactions from "../Transaction/Transaction.jsx";
+import Profile from "../Profile/Profile.jsx";
+import Settings from "../Settings/Settings.jsx";
 import FingerprintConsole from "../FingerPrintConsole";
 
 export default function Dashboard() {

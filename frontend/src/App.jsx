@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Homepage from "./components/Homepage/Homepage";
+// import Homepage from "./components/Homepage/Homepage";
 import Login from './components/Login/Login';
 import Navbar from './components/Navbar/Navbar';
 // import ProductPage from './components/Product/ProductPage';
@@ -49,7 +49,7 @@ function App() {
         <Route path="/" element={<LandingPage/>} />
         <Route path="/login" element={<Login/>} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Homepage />} />
+        {/* <Route path="/dashboard" element={<Homepage />} /> */}
         <Route path="/cart" element={<Cart/>} />
         <Route path="/register" element={<Register/>} />
         <Route path="/search" element={<Search />} />
