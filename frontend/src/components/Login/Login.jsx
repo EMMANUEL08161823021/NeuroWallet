@@ -3,7 +3,7 @@ import { api } from "../../api/client";
 import { prepPublicKeyOptions, attestationToJSON, assertionToJSON } from "../../utils/webauthn";
 import { useNavigate, Link } from "react-router-dom";
 
-const PASSKEY_BASE = "http://localhost:5173/api/webauthn"; // adjust if your router is mounted elsewhere (e.g. "/webauthn")
+const PASSKEY_BASE = `${import.meta.env.VITE_BACKEND_URL}/api/webauthn`; // adjust if your router is mounted elsewhere (e.g. "/webauthn")
 
 export default function Login() {
   const [tab, setTab] = useState("login"); // 'login' | 'signup'
@@ -36,7 +36,7 @@ export default function Login() {
     setBusy(true); 
     setMsg(null);
     try {
-      await api.post("/auth/magic-link", { email, clientNonce: "web-" + crypto.randomUUID() });
+      await api.post("/api/auth/magic-link", { email, clientNonce: "web-" + crypto.randomUUID() });
       setNotice("ok", "If the email exists, a sign-in link was sent.");
     } catch {
       setNotice("err", "Could not send magic link");
@@ -49,11 +49,11 @@ export default function Login() {
   const onPasskeyRegister = async () => {
     setBusy(true); setMsg(null);
     try {
-      const { data: options } = await api.post(`http://localhost:9000/api/webauthn/generate-registration-options`, { email });
+      const { data: options } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-registration-options`, { email });
       const publicKey = prepPublicKeyOptions(options);
       const cred = await navigator.credentials.create({ publicKey });
       const att = attestationToJSON(cred);
-      const { data: verify } = await api.post(`http://localhost:9000/api/webauthn/verify-registration`, {
+      const { data: verify } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-registration`, {
         email, attestationResponse: att,
       });
       if (verify?.verified) {
@@ -73,11 +73,11 @@ export default function Login() {
   const onPasskeyLogin = async () => {
     setBusy(true); setMsg(null);
     try {
-      const { data: options } = await api.post(`http://localhost:9000/api/webauthn/generate-authentication-options`, { email });
+      const { data: options } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`, { email });
       const publicKey = prepPublicKeyOptions(options);
       const assertion = await navigator.credentials.get({ publicKey });
       const auth = assertionToJSON(assertion);
-      const { data: verify } = await api.post(`http://localhost:9000/api/webauthn/verify-authentication`, {
+      const { data: verify } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`, {
         email, assertionResponse: auth,
       });
       if (verify?.verified) {

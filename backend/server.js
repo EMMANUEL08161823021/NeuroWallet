@@ -31,7 +31,7 @@ app.use(helmet());
 app.use(
   cors({
     // Must be ORIGIN only (no path)
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://neuro-wallet.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "X-Requested-With"],

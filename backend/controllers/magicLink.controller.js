@@ -36,7 +36,7 @@ async function requestMagicLink(req, res, next) {
     });
 
     if (user) {
-      const url = new URL("http://localhost:5173//auth/magic");
+      const url = new URL("https://neuro-wallet.vercel.app/auth/magic");
       url.searchParams.set("token", raw);
       if (clientNonce) url.searchParams.set("nonce", clientNonce);
       url.searchParams.set("redirect", "/dashboard");
