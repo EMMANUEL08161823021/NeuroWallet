@@ -47,20 +47,18 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage/>} />
         <Route path="/login" element={<Login/>} />
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/transfer" element={<AccessibleTransfer />} />
-        {/* <Route path="/dashboard" element={<Homepage />} /> */}
         <Route path="/cart" element={<Cart/>} />
         <Route path="/docs" element={<Documentation/>} />
         <Route path="/send" element={<Send/>} />
-        {/* <Route
-          path="/admin"
+        <Route
+          path="/dashboard"
           element={
-              <ProtectedAdminRoute>
-                <AdminPanel />
+            <ProtectedAdminRoute>
+                <Dashboard />
               </ProtectedAdminRoute>
           }
-        /> */}
+        />
         {/* <Route path="/product/:id" element={<ProductPage />} /> */}
         {/* <Route path="/contact" element={<Contact />} /> */}
       </Routes>

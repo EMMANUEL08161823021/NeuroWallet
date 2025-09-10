@@ -81,7 +81,7 @@ async function verifyMagicLink(req, res, next) {
     const tokenJwt = signAccess({ sub: user.id, email: user.email, recentAuthAt: new Date() });
 
     // Redirect to SPA callback with token in hash
-    res.redirect(`${process.env.APP_URL}/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(redirect)}`);
+    res.redirect(`https://neuro-wallet.vercel.app/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(redirect)}`);
   } catch (e) { next(e); }
 }
 
