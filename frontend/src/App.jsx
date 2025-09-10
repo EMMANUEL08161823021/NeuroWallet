@@ -11,7 +11,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Send from './components/SendMoney';
 import LandingPage from './components/LandingPage/LandingPage';
 import AccessibleTransfer from './components/AccessibleTransfer/AccessibleTransfer';
-import MagicCallback from './components/MagicCallback';
+// import MagicCallback from './components/MagicCallback';
+import AuthCallback from './components/AuthCallback';
 
 
 function App() {
@@ -25,7 +26,8 @@ function App() {
         <Route path="/cart" element={<Cart/>} />
         <Route path="/docs" element={<Documentation/>} />
         <Route path="/send" element={<Send/>} />
-        <Route path="/auth/magic" element={<MagicCallback />} />
+        {/* <Route path="/auth/magic" element={<MagicCallback />} /> */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/dashboard"
           element={
