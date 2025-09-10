@@ -7,40 +7,13 @@ import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import Dashboard from './components/Dashboard/Dashboard';
 import Documentation from "./components/Documentation/Documentation";
-
+import ProtectedRoute from './components/ProtectedRoute';
 import Send from './components/SendMoney';
 import LandingPage from './components/LandingPage/LandingPage';
 import AccessibleTransfer from './components/AccessibleTransfer/AccessibleTransfer';
 
 
 function App() {
-  const ProtectedAdminRoute = ({ children }) => {
-    const [isAdmin, setIsAdmin] = useState(null);
-
-    useEffect(() => {
-      const checkAdmin = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setIsAdmin(false);
-        return;
-      }
-      try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
-        setIsAdmin(data.isAdmin);
-      } catch (err) {
-        setIsAdmin(false);
-      }
-      };
-      checkAdmin();
-    }, []);
-
-    if (isAdmin === null) return <div>Loading...</div>;
-    return isAdmin ? children : <Navigate to="/login" />;
-  };
-
   return (
     <>
       {/* <Navbar/> */}
@@ -54,13 +27,11 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedAdminRoute>
-                <Dashboard />
-              </ProtectedAdminRoute>
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
           }
         />
-        {/* <Route path="/product/:id" element={<ProductPage />} /> */}
-        {/* <Route path="/contact" element={<Contact />} /> */}
       </Routes>
 
 

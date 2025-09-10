@@ -20,7 +20,7 @@ export default function Login() {
     e.preventDefault();
     setBusy(true); setMsg(null);
     try {
-      const { data } = await api.post("/pin/login", { email, pin });
+      const { data } = await api.post("/api/pin/login", { email, pin });
       localStorage.setItem("access", data.token);
       setNotice("ok", "Welcome back!");
       navigate("/dashboard");
