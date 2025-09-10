@@ -63,26 +63,35 @@ async function verifyMagicLink(req, res, next) {
     const { token, nonce, redirect = "/dashboard" } = req.query;
     if (!token) return res.status(400).send("Missing token");
 
-    const records = await MagicLink.find({ used: false }).sort({ createdAt: -1 }).limit(50);
-    let match = null;
-    for (const ml of records) {
-      if (await bcrypt.compare(token, ml.tokenHash)) { match = ml; break; }
-    }
+    const match = await MagicLink.findOne({ rawToken: token, used: false });
     if (!match) return res.status(400).send("Invalid or used link");
+
     if (match.expiresAt < new Date()) return res.status(400).send("Link expired");
-    if (match.clientNonce && match.clientNonce !== nonce) return res.status(400).send("Link not valid on this device");
+    if (match.clientNonce && match.clientNonce !== nonce)
+      return res.status(400).send("Link not valid on this device");
 
     const user = await User.findOne({ email: match.email });
     if (!user) return res.status(400).send("Invalid link");
 
+    // mark link as used
     match.used = true;
     await match.save();
 
-    const tokenJwt = signAccess({ sub: user.id, email: user.email, recentAuthAt: new Date() });
+    const tokenJwt = signAccess({
+      sub: user.id,
+      email: user.email,
+      recentAuthAt: new Date(),
+    });
 
-    // Redirect to SPA callback with token in hash
-    res.redirect(`https://neuro-wallet.vercel.app/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(redirect)}`);
-  } catch (e) { next(e); }
+    // redirect back to SPA with token
+    res.redirect(
+      `https://neuro-wallet.vercel.app/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(
+        redirect
+      )}`
+    );
+  } catch (e) {
+    next(e);
+  }
 }
 
 module.exports = { requestMagicLink, verifyMagicLink };
