@@ -9,7 +9,7 @@ import {
   // Eye,
   Send,
   Plus,
-  
+  X,
   Settings,
   HelpCircle,
   Menu,
@@ -72,7 +72,7 @@ const LandingPage = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [transferAmount, setTransferAmount] = useState("");
   const [openIndex, setOpenIndex] = useState(null);
-
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [current, setCurrent] = useState(0);
 
   const prevSlide = () =>
@@ -192,10 +192,9 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation Header */}
+    <div className="min-h-screen bg-white">
       <header className="fixed top-0 left-0 w-full bg-white border-b border-gray-200 shadow-sm z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-6">
           <div className="flex justify-between items-center h-16">
             {/* Logo + Brand */}
             <div className="flex items-center gap-4">
@@ -203,9 +202,11 @@ const LandingPage = () => {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
                   <CreditCard className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-gray-900">NeuroWallet</h1>
+                <h1 className="text-xl font-bold text-gray-900">
+                  NeuroWallet
+                </h1>
               </div>
-              <div className="flex items-center text-sm text-gray-500">
+              <div className="hidden sm:flex items-center text-sm text-gray-500">
                 <Accessibility className="h-3 w-3 mr-1" />
                 Accessible Banking
               </div>
@@ -230,18 +231,44 @@ const LandingPage = () => {
             </nav>
 
             {/* Mobile Menu Icon */}
-            <button className="md:hidden p-2 rounded-lg hover:bg-gray-100">
-              <Menu className="h-5 w-5 text-gray-700" />
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              {mobileOpen ? (
+                <X className="h-5 w-5 text-gray-700" />
+              ) : (
+                <Menu className="h-5 w-5 text-gray-700" />
+              )}
             </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+            <div className="flex flex-col p-4 gap-3">
+              <button className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </button>
+              <button className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition">
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help
+              </button>
+              <Link to="/login">
+                <button className="flex items-center justify-center text-sm border border-blue-600 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-50 transition">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Secure Login
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
-      <br/>
-      {/* <br/> */}
-
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-20 overflow-hidden">
+      <section className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-15 overflow-hidden mt-16">
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/40"></div>
 
@@ -250,75 +277,72 @@ const LandingPage = () => {
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
 
         {/* Content */}
-        <div className="relative max-w-6xl mx-auto px-6 lg:px-8  h-[80vh]">
-          <div className="flex justify-between w-[100%] text-center items-start">
-            {/* Left Text Section */}
-            <div className="space-y-8 text-center w-[100%] lg:w-[50%] lg:text-left flex flex-col justify-center">
-              <h1 className="text-4xl lg:text-6xl font-extrabold leading-tight">
-                Banking for{" "}
-                <span className="bg-gradient-to-r from-yellow-300 via-pink-300 to-red-400 bg-clip-text text-transparent">
-                  Everyone
-                </span>
-              </h1>
-              <p className="text-lg lg:text-xl text-gray-200 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Experience accessible digital banking designed for users with visual,
-                hearing, and motor challenges. <br />
-                Banking should be simple, secure, and inclusive for all.
-              </p>
+        <div className="relative max-w-6xl mx-auto px-6 h-[80vh] flex flex-col lg:flex-row items-center lg:items-start justify-center gap-10">
+          {/* Left Text Section */}
+          <div className="space-y-8 px-0 text-center lg:text-left w-full lg:w-1/2">
+            <h1 className="text-4xl lg:text-6xl font-extrabold leading-tight">
+              Banking for{" "}
+              <span className="bg-gradient-to-r from-yellow-300 via-pink-300 to-red-400 bg-clip-text text-transparent">
+                Everyone
+              </span>
+            </h1>
+            <p className="text-lg lg:text-xl text-gray-200 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+              Experience accessible digital banking designed for users with
+              visual, hearing, and motor challenges. <br />
+              Banking should be simple, secure, and inclusive for all.
+            </p>
 
-              {/* Feature Highlights */}
-              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
-                  <Accessibility className="h-5 w-5" />
-                  <span className="text-sm font-medium">Accessible Design</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
-                  <Mic className="h-5 w-5" />
-                  <span className="text-sm font-medium">Voice Commands</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
-                  <Shield className="h-5 w-5" />
-                  <span className="text-sm font-medium">Secure Authentication</span>
-                </div>
+            {/* Feature Highlights */}
+            <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+              <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
+                <Accessibility className="h-5 w-5" />
+                <span className="text-sm font-medium">Accessible Design</span>
               </div>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-wrap gap-4 pt-4 justify-center lg:justify-start">
-                <Link to={"/login"}>
-                  <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition transform">
-                    Get Started
-                  </button>
-                </Link>
-                <Link to={"/docs"}>
-                  <button className="px-6 py-3 border border-white/60 rounded-xl font-semibold hover:bg-white/10 hover:scale-105 transition transform">
-                    Learn More
-                  </button>
-                </Link>
+              <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
+                <Mic className="h-5 w-5" />
+                <span className="text-sm font-medium">Voice Commands</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full shadow-md">
+                <Shield className="h-5 w-5" />
+                <span className="text-sm font-medium">Secure Authentication</span>
               </div>
             </div>
 
-            {/* Right Image Section */}
-            <div className="hidden lg:w-[45%] lg:flex justify-center">
-              <img
-                src={Hero}
-                style={{height: '500px', width: '300px'}}
-                alt="Diverse people using accessible banking technology"
-                className="rounded-3xl shadow-2xl border-4 border-white/20 hover:scale-105 transition-transform duration-500"
-              />
+            {/* CTA Buttons */}
+            <div className="flex flex-wrap gap-4 pt-4 justify-center lg:justify-start">
+              <Link to={"/login"}>
+                <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition transform">
+                  Get Started
+                </button>
+              </Link>
+              <Link to={"/docs"}>
+                <button className="px-6 py-3 border border-white/60 rounded-xl font-semibold hover:bg-white/10 hover:scale-105 transition transform">
+                  Learn More
+                </button>
+              </Link>
             </div>
           </div>
 
+          {/* Right Image Section */}
+          <div className="hidden lg:flex w-[45%] justify-center">
+            <img
+              src={Hero}
+              style={{ height: "500px", width: "300px" }}
+              alt="Diverse people using accessible banking technology"
+              className="rounded-3xl shadow-2xl border-4 border-white/20 hover:scale-105 transition-transform duration-500"
+            />
+          </div>
         </div>
       </section>
 
-      <section className="py-12 px-6 bg-gray-50">
-        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+      <section className="py-12">
+        <div className="max-w-6xl px-6 mx-auto flex flex-col items-center text-center">
           {/* Title */}
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-extrabold text-gray-900"
+            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
           >
             Why Traditional Banking Apps Fail
           </motion.h1>
@@ -375,10 +399,9 @@ const LandingPage = () => {
       </section>
 
       {/* Meet NeuroWallet */}
-      <br/>
-      <br/>
-      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
-        <div className="max-w-5xl mx-auto px-6 text-center">
+
+      <section className="py-12 ">
+        <div className="max-w-6xl mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
             Meet <span className="text-blue-600">NeuroWallet</span>
           </h1>
@@ -436,10 +459,9 @@ const LandingPage = () => {
 
 
       {/* Key Features */}
-      <br/>
-      <br/>
-      <section className="py-16 bg-white">
-        <div className="max-w-5xl mx-auto px-6 text-center">
+
+      <section className="py-12 ">
+        <div className="max-w-6xl mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
             Key <span className="text-blue-600">Features</span>
           </h1>
@@ -509,16 +531,14 @@ const LandingPage = () => {
 
       {/* Accessibility First, Always*/}
 
-      <br/>
-      <br/>
-      <section className="py-16 bg-white">
-        <div className="max-w-5xl mx-auto px-6 text-center">
+      <section className="py-12 ">
+        <div className="max-w-6xl mx-auto px-6 text-center">
           {/* Section Heading */}
           <motion.h2
             initial={{ opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-extrabold text-gray-900"
+            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
           >
             Accessibility First, Always
           </motion.h2>
@@ -554,16 +574,14 @@ const LandingPage = () => {
 
 
       {/* How it works */}
-      <br/>
-      <br/>
-      <section className="py-12 px-6 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+      <section className="py-12 ">
+        <div className="max-w-6xl px-6  mx-auto flex flex-col items-center text-center">
           {/* Title */}
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-extrabold text-gray-900"
+            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
           >
             How It Works
           </motion.h1>
@@ -636,11 +654,11 @@ const LandingPage = () => {
       <br/>
       <br/>
 
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-5xl mx-auto px-6 text-center">
+      <section className="py-12 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6 text-center">
           {/* Section Title */}
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-            Screenshots / Demo
+          <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+            Demo
           </h2>
           <p className="text-gray-600 mb-10">
             A quick look at how NeuroWallet empowers inclusive, secure banking
@@ -699,14 +717,14 @@ const LandingPage = () => {
       </section>
 
       {/*Frequently Asked Question  */}
-      <section className="py-16 px-6 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="py-12  bg-gray-50">
+        <div className="max-w-6xl mx-auto text-center">
           {/* Title */}
           <motion.h2
             initial={{ opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-extrabold text-gray-900"
+            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
           >
             Frequently Asked Questions
           </motion.h2>
@@ -753,11 +771,12 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
-
+      <br/>
+      <br/>
 
       {/* Footer */}
-      <footer className="bg-muted border-t border-border mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <footer className="bg-muted border-t border-border">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center space-y-4">
             <div className="flex justify-center items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
@@ -785,114 +804,3 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
-
-
-
-
-// {/* Main Dashboard */}
-// <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-//   {/* Account Overview */}
-//   <section className="mb-12">
-//     <div className="flex items-center justify-between mb-6">
-//       <h2 className="text-2xl font-bold text-foreground">Your Accounts</h2>
-//       <Button
-//         variant="outline"
-//         size="sm"
-//         onClick={() => setShowBalance(!showBalance)}
-//         aria-label={showBalance ? "Hide all balances" : "Show all balances"}
-//       >
-//         <Eye className="h-4 w-4 mr-2" />
-//         {showBalance ? "Hide Balances" : "Show Balances"}
-//       </Button>
-//     </div>
-
-//     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-//       {accounts.map((account) => (
-//         <AccountCard
-//           key={account.id}
-//           account={account}
-//           showBalance={showBalance}
-//           onToggleBalance={() => setShowBalance(!showBalance)}
-//           onViewDetails={() => {
-//             toast({
-//               title: "Account details",
-//               description: `Viewing details for ${account.name}`,
-//             });
-//           }}
-//         />
-//       ))}
-//     </div>
-//   </section>
-
-//   {/* Quick Actions */}
-//   <section className="mb-12">
-//     <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
-//     <div className="grid sm:grid-cols-2 gap-6">
-//       {/* Quick Transfer */}
-//       <Card>
-//         <CardHeader>
-//           <CardTitle className="flex items-center gap-2">
-//             <Send className="h-5 w-5" />
-//             Quick Transfer
-//           </CardTitle>
-//         </CardHeader>
-//         <CardContent className="space-y-4">
-//           <div className="space-y-2">
-//             <label htmlFor="transfer-amount" className="text-sm font-medium">
-//               Amount ($)
-//             </label>
-//             <Input
-//               id="transfer-amount"
-//               type="number"
-//               placeholder="0.00"
-//               value={transferAmount}
-//               onChange={(e) => setTransferAmount(e.target.value)}
-//               className="text-lg h-12"
-//               min={0}
-//               step={0.01}
-//             />
-//           </div>
-//           <Button onClick={handleQuickTransfer} className="w-full h-12" size="lg">
-//             <Send className="h-4 w-4 mr-2" />
-//             Send Money
-//           </Button>
-//         </CardContent>
-//       </Card>
-
-//       {/* Add Money */}
-//       <Card>
-//         <CardHeader>
-//           <CardTitle className="flex items-center gap-2">
-//             <Plus className="h-5 w-5" />
-//             Add Money
-//           </CardTitle>
-//         </CardHeader>
-//         <CardContent className="space-y-4">
-//           <div className="grid grid-cols-2 gap-3">
-//             <Button variant="outline" size="lg">
-//               $25
-//             </Button>
-//             <Button variant="outline" size="lg">
-//               $50
-//             </Button>
-//             <Button variant="outline" size="lg">
-//               $100
-//             </Button>
-//             <Button variant="outline" size="lg">
-//               Custom
-//             </Button>
-//           </div>
-//           <Button className="w-full h-12" size="lg">
-//             <Plus className="h-4 w-4 mr-2" />
-//             Add to Wallet
-//           </Button>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   </section>
-
-//   {/* Transaction History */}
-//   <section>
-//     <TransactionHistory transactions={transactions} maxVisible={6} />
-//   </section>
-// </main>

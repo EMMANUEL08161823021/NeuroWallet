@@ -10,60 +10,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   
-  const cartPage = () => {
 
-    if(user){
-      console.log('Hello');
-      
-      navigate('/cart');
-    } else {
-      navigate('/login');
-    }
-  }
-
-  useEffect(() => {
-
-    const fetchCart = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/cart`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error('Failed to fetch cart');
-        const data = await response.json();
-        const count = data.items.reduce((sum, item) => sum + item.quantity, 0);
-        setCartCount(count);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    // Run initially
-    fetchCart();
-
-    // Set up interval
-    const interval = setInterval(fetchCart, 1000); // fetch every second
-
-    // Clean up interval on component unmount or login status change
-    return () => clearInterval(interval);
-  }, [isLoggedIn]);
-
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-    setIsLoggedIn(false);
-    setCartCount(0);
-  };
 
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light fixed-top">
