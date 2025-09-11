@@ -287,7 +287,14 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
       {stage === "camera" && (
         <div className="space-y-4">
-          <Webcam audio={false} ref={webcamRef} screenshotFormat="image/png" className="rounded-lg w-full h-60 object-cover" />
+          <Webcam 
+          audio={false} 
+          ref={webcamRef} 
+          screenshotFormat="image/png"  
+          videoConstraints={{
+            facingMode: "environment", // ✅ Prefer back camera (more reliable than exact)
+          }} 
+          className="rounded-lg w-full h-60 object-cover" />
           <div className="flex gap-2">
             <button onClick={snapAndOcr} className="flex-1 bg-indigo-600 text-white py-3 rounded-lg">Snap</button>
             <button onClick={()=>{ setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }} className="flex-1 bg-gray-200 py-3 rounded-lg">Cancel</button>

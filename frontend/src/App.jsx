@@ -28,7 +28,7 @@ function App() {
         <Route path="/cart" element={<Cart/>} />
         <Route path="/docs" element={<Documentation/>} />
         <Route path="/send" element={<Send/>} />
-        <Route path="/sendmoney" element={<SendMoney/>} />
+        <Route path="/sendmoney" element={<AccessibleSendMoney/>} />
         {/* <Route path="/auth/magic" element={<MagicCallback />} /> */}
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
