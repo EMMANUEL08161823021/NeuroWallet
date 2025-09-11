@@ -14,6 +14,7 @@ import AccessibleTransfer from './components/AccessibleTransfer/AccessibleTransf
 // import MagicCallback from './components/MagicCallback';
 import AuthCallback from './components/AuthCallback';
 import AccessibleSendMoney from './components/AccessibleSendMoney';
+import SendMoney from './components/SendMoney';
 
 
 function App() {
@@ -27,7 +28,7 @@ function App() {
         <Route path="/cart" element={<Cart/>} />
         <Route path="/docs" element={<Documentation/>} />
         <Route path="/send" element={<Send/>} />
-        <Route path="/sendmoney" element={<AccessibleSendMoney/>} />
+        <Route path="/sendmoney" element={<SendMoney/>} />
         {/* <Route path="/auth/magic" element={<MagicCallback />} /> */}
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
