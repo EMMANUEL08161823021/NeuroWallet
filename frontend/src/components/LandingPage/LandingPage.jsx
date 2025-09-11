@@ -718,7 +718,7 @@ const LandingPage = () => {
 
       {/*Frequently Asked Question  */}
       <section className="py-12  bg-gray-50">
-        <div className="max-w-6xl mx-auto text-center">
+        <div className="max-w-6xl px-6 mx-auto text-center">
           {/* Title */}
           <motion.h2
             initial={{ opacity: 0, y: -20 }}

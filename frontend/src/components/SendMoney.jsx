@@ -89,6 +89,9 @@ export default function SendMoney() {
             ref={webcamRef}
             screenshotFormat="image/png"
             className="w-80 h-60 rounded-lg shadow"
+            videoConstraints={{
+              facingMode: { exact: "environment" }, // forces back camera
+            }}
           />
           <button
             onClick={captureAccountDetails}
