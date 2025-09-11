@@ -15,11 +15,16 @@ export default function SendMoney() {
   const captureAccountDetails = async () => {
     const imageSrc = webcamRef.current.getScreenshot();
     setStatus("🔎 Scanning account details...");
-    const { data: { text } } = await Tesseract.recognize(imageSrc, "eng");
+
+    const {
+      data: { text },
+    } = await Tesseract.recognize(imageSrc, "eng");
 
     // crude parsing
     const accNumMatch = text.match(/\b\d{10}\b/);
-    const bankMatch = text.match(/\b(Access|GTB|UBA|Zenith|First|Union|Fidelity|Ecobank)\b/i);
+    const bankMatch = text.match(
+      /\b(Access|GTB|UBA|Zenith|First|Union|Fidelity|Ecobank)\b/i
+    );
 
     setAccountNumber(accNumMatch ? accNumMatch[0] : "Not found");
     setBankName(bankMatch ? bankMatch[0] : "Unknown Bank");
@@ -34,7 +39,8 @@ export default function SendMoney() {
 
   // 🎤 Step 2: Voice input for amount
   const listenForAmount = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = "en-NG";
 
@@ -67,7 +73,9 @@ export default function SendMoney() {
       setStatus("✅ Transfer Successful");
       setStep("done");
     } else {
-      const msg = new SpeechSynthesisUtterance("Transfer failed. Missing details.");
+      const msg = new SpeechSynthesisUtterance(
+        "Transfer failed. Missing details."
+      );
       window.speechSynthesis.speak(msg);
 
       const failSound = new Audio("/sounds/fail.mp3");
@@ -82,7 +90,7 @@ export default function SendMoney() {
     <div className="p-6 flex flex-col items-center space-y-6">
       <h1 className="text-2xl font-bold">Send Money</h1>
 
-      {/* Step 1: Camera */}
+      {/* Step 1: Camera (Back Camera Enabled) */}
       {step === "camera" && (
         <>
           <Webcam
@@ -90,7 +98,7 @@ export default function SendMoney() {
             screenshotFormat="image/png"
             className="w-80 h-60 rounded-lg shadow"
             videoConstraints={{
-              facingMode: { exact: "environment" }, // forces back camera
+              facingMode: { exact: "environment" }, // Force back camera
             }}
           />
           <button
@@ -121,9 +129,15 @@ export default function SendMoney() {
 
       {/* Captured details */}
       <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg w-full text-center">
-        <p><strong>Account Number:</strong> {accountNumber}</p>
-        <p><strong>Bank Name:</strong> {bankName}</p>
-        <p><strong>Amount:</strong> ₦{amount}</p>
+        <p>
+          <strong>Account Number:</strong> {accountNumber}
+        </p>
+        <p>
+          <strong>Bank Name:</strong> {bankName}
+        </p>
+        <p>
+          <strong>Amount:</strong> ₦{amount}
+        </p>
       </div>
 
       {/* Status */}
