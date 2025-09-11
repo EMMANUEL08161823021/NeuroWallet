@@ -90,7 +90,7 @@ export default function SendMoney() {
     <div className="p-6 flex flex-col items-center space-y-6">
       <h1 className="text-2xl font-bold">Send Money</h1>
 
-      {/* Step 1: Camera (Back Camera Enabled) */}
+      {/* Step 1: Camera (Back Camera Preferred) */}
       {step === "camera" && (
         <>
           <Webcam
@@ -98,7 +98,7 @@ export default function SendMoney() {
             screenshotFormat="image/png"
             className="w-80 h-60 rounded-lg shadow"
             videoConstraints={{
-              facingMode: { exact: "environment" }, // Force back camera
+              facingMode: "environment", // ✅ Prefer back camera (more reliable than exact)
             }}
           />
           <button
