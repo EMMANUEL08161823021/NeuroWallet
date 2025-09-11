@@ -4,12 +4,14 @@ import HomePage from "../Homepage/Homepage.jsx";
 import Transactions from "../Transaction/Transaction.jsx";
 import Profile from "../Profile/Profile.jsx";
 import Settings from "../Settings/Settings.jsx";
+import { Link } from "react-router-dom";
 import FingerprintConsole from "../FingerprintConsole/FingerprintConsole.jsx";
+import AccessibleSendMoney from "../AccessibleSendMoney.jsx";
 
 export default function Dashboard() {
   const [index, setIndex] = useState(0);
-  const pages = [<HomePage />, <Transactions />, <Profile />, <Settings />];
-  const labels = ["Home", "Transactions", "Profile", "Settings"];
+  const pages = [<HomePage />, <Transactions />, <Profile />, <Settings />, <AccessibleSendMoney/>];
+  const labels = ["Home", "Transactions", "Profile", "Settings", "Send"];
 
   // 🔊 Speak page name + update screen reader region
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function Dashboard() {
       <div id="live-region" aria-live="polite" className="sr-only"></div>
 
       {/* Bottom console (Fingerprint, etc.) */}
-      <div className="fixed bottom-4 w-full flex justify-center">
+      <div className="fixed bottom-4 w-full flex gap-2 justify-center">
         <FingerprintConsole />
       </div>
     </div>

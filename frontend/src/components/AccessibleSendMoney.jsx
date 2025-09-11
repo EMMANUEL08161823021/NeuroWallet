@@ -325,25 +325,17 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
             <p>Amount: <span className="font-medium">₦{amount}</span></p>
           </div>
 
-          <p className="text-sm text-gray-600">Place your finger to confirm. Tap to cancel.</p>
+          <p className="text-sm text-gray-600">
+            Place your finger on the fingerprint console below to confirm.  
+            Or tap Cancel to go back.
+          </p>
 
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Fingerprint console. Tap to cancel. Hold to confirm transfer."
-            onMouseDown={handlePressStart}
-            onMouseUp={handlePressEnd}
-            onTouchStart={handlePressStart}
-            onTouchEnd={handlePressEnd}
-            onKeyDown={(e)=>{ if(e.key === "Enter") { /* treat as tap */ setStatus("Transaction cancelled"); speak("Transaction cancelled"); setStage("idle"); } }}
-            className="mx-auto w-56 h-56 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center shadow-lg text-white text-center select-none"
+          <button
+            onClick={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }}
+            className="w-full bg-gray-200 py-3 rounded-lg"
           >
-            <div>
-              <div className="text-5xl">🔒</div>
-              <div className="mt-2 font-semibold">Hold to Confirm</div>
-              <div className="text-sm mt-1">Tap to Cancel</div>
-            </div>
-          </div>
+            Cancel
+          </button>
         </div>
       )}
 

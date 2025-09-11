@@ -55,7 +55,7 @@ export default function FingerprintConsole() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full">
+    <div className="flex gap-2 items-center justify-center w-full h-full">
       <div
         role="button"
         tabIndex={0}
