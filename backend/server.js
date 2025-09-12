@@ -53,6 +53,9 @@ app.use(
 // --- Health check ---
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
+
+
+
 console.log("webauthnRoutes:", typeof webauthnRoutes);
 console.log("pinRoutes:", typeof pinRoutes);
 console.log("accountRoutes:", typeof accountRoutes);

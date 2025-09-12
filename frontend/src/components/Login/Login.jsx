@@ -15,6 +15,10 @@ export default function Login() {
 
   const setNotice = (type, text) => setMsg({ type, text });
 
+
+  
+  
+
   // --- PIN login ---
   const onPinLogin = async (e) => {
     e.preventDefault();
@@ -47,57 +51,140 @@ export default function Login() {
 
   // --- Passkey Registration (for sign-up, can also be used after login to enroll) ---
   const onPasskeyRegister = async () => {
-    setBusy(true); setMsg(null);
+    setBusy(true);
+    setMsg(null);
+
     try {
-      const { data: options } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-registration-options`, { email });
+      // 1. Get registration options from backend
+      const { data: options } = await api.post(
+        "http://localhost:9000/api/webauthn/generate-registration-options",
+        { email }
+      );
+
+      if (!options) {
+        throw new Error("No registration options returned");
+      }
+
+      // ✅ Ensure `name` and `displayName` exist
+      if (!options.user.name) {
+        options.user.name = email; // use email as login name
+      }
+      if (!options.user.displayName) {
+        options.user.displayName = email; // fallback if no full name available
+      }
+
+      console.log("Fixed options before calling WebAuthn:", options);
+
+      // 2. Prepare options for navigator
       const publicKey = prepPublicKeyOptions(options);
-      const cred = await navigator.credentials.create({ publicKey });
-      const att = attestationToJSON(cred);
-      const { data: verify } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-registration`, {
-        email, attestationResponse: att,
-      });
+
+      // 3. Ask authenticator to create credentials
+      const credential = await navigator.credentials.create({ publicKey });
+
+      if (!credential) {
+        throw new Error("No credential created by authenticator");
+      }
+
+      // 4. Convert attestation to JSON-safe format
+      const attestationResponse = attestationToJSON(credential);
+
+      // 5. Send attestation back to server for verification & storage
+      const { data: verify } = await api.post(
+        "http://localhost:9000/api/webauthn/verify-registration",
+        { email, attestationResponse }
+      );
+
+      // 6. UI feedback
       if (verify?.verified) {
-        setNotice("ok", "Passkey created! You can now sign in with passkey.");
+        setNotice("ok", "✅ Passkey created! You can now sign in with passkey.");
         setTab("login");
       } else {
-        setNotice("err", "Passkey registration failed");
+        setNotice("err", "❌ Passkey registration failed on verification.");
       }
-    } catch (e) {
-      setNotice("err", "Passkey registration failed");
+    } catch (err) {
+      console.error("Passkey registration error:", err);
+      setNotice("err", "⚠️ Passkey registration failed.");
     } finally {
       setBusy(false);
     }
   };
 
+
+
   // --- Passkey Authentication (login) ---
+  // Utility: ArrayBuffer → base64url
+  function bufferToBase64url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let b of bytes) {
+      binary += String.fromCharCode(b);
+    }
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+// Convert the assertion into JSON-safe format
+  function assertionToJSON(assertion) {
+    if (!assertion) return null;
+    return {
+      id: assertion.id,
+      type: assertion.type,
+      rawId: bufferToBase64url(assertion.rawId),
+      response: {
+        clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
+        authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
+        signature: bufferToBase64url(assertion.response.signature),
+        userHandle: assertion.response.userHandle
+          ? bufferToBase64url(assertion.response.userHandle)
+          : null,
+      },
+    };
+  }
+
   const onPasskeyLogin = async () => {
-    setBusy(true); setMsg(null);
+    setBusy(true);
+    setMsg(null);
+
     try {
-      const { data: options } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`, { email });
+      // 1️⃣ Get challenge/options from backend
+      const { data: options } = await api.post(
+        "http://localhost:9000/api/webauthn/generate-authentication-options",
+        { email }
+      );
+
       const publicKey = prepPublicKeyOptions(options);
+
+      // 2️⃣ Ask authenticator for credentials
       const assertion = await navigator.credentials.get({ publicKey });
+
+      // 3️⃣ Convert ArrayBuffers → base64url for transport
       const auth = assertionToJSON(assertion);
-      const { data: verify } = await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`, {
-        email, assertionResponse: auth,
-      });
+
+      // 4️⃣ Send to backend for verification
+      const { data: verify } = await api.post(
+        "http://localhost:9000/api/webauthn/verify-authentication",
+        {
+          email,
+          assertionResponse: auth,
+        }
+      );
+
       if (verify?.verified) {
-        // Your passkey verify route currently returns { verified: true } only.
-        // If you also want a JWT, modify backend to sign & return it.
-        // For now we’ll just navigate and rely on an already logged-in state if present.
         setNotice("ok", "Passkey verified");
         navigate("/dashboard");
       } else {
         setNotice("err", "Passkey authentication failed");
       }
     } catch (e) {
+      console.error("Passkey login error:", e);
       setNotice("err", "Passkey authentication failed");
     } finally {
       setBusy(false);
     }
   };
 
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 border-2">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl shadow-sm">
         <div className="p-6 border-b border-gray-200">
           <h1 className="text-lg font-semibold">NeuroWallet — Secure Access</h1>

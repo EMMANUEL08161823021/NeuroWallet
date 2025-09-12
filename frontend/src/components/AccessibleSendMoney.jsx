@@ -271,13 +271,24 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       {/* live region for screen readers */}
       <div aria-live="polite" ref={liveRef} className="sr-only" />
 
+      {/* status visible for everyone */}
+      <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+        <strong>Status:</strong> {status}
+      </div>
+
+      {/* debug / extracted OCR text (hidden from screen readers normally) */}
+      <details className="mt-3 text-xs text-gray-500">
+        <summary>OCR debug</summary>
+        <pre className="whitespace-pre-wrap text-xs">{ocrText || "—"}</pre>
+      </details>
+
       {/* Stage-based UI */}
       {stage === "idle" && (
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Tap the button to start sending money. The app will guide you with voice and screen reader messages.</p>
           <button
             onClick={startCamera}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg"
+            className="w-full bg-blue-600 text-white py-6 rounded-lg"
             aria-label="Start send money flow"
           >
             Send Money
@@ -352,16 +363,6 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         </div>
       )}
 
-      {/* status visible for everyone */}
-      <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
-        <strong>Status:</strong> {status}
-      </div>
-
-      {/* debug / extracted OCR text (hidden from screen readers normally) */}
-      <details className="mt-3 text-xs text-gray-500">
-        <summary>OCR debug</summary>
-        <pre className="whitespace-pre-wrap text-xs">{ocrText || "—"}</pre>
-      </details>
     </div>
   );
 }

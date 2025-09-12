@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const User = require('../models/User');
 const Credential = require('../models/Credential');
+const { isoUint8Array } = require("@simplewebauthn/server/helpers");
 
 const {
   generateRegistrationOptions,
@@ -15,57 +16,73 @@ const base64url = require('base64url');
 
 
 // Generate Registration Options
-router.post("/generate-registration-options", async (req, res) => { 
+router.post("/generate-registration-options", async (req, res) => {
   try {
     const { email } = req.body;
-    console.log(req.body);
 
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      const newId = new mongoose.Types.ObjectId();
-      user = new User({ _id: newId, email });
-      await user.save();
+    console.log("Email received:", email);
+    if (!email) {
+      return res.status(400).json({ error: "Missing email" });
     }
 
-    // ✅ Convert MongoDB ObjectId → Buffer
-    const userID = Buffer.from(user._id.toHexString(), "hex");
+    // Look up or create user
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({ email });
+    }
+
+    // Convert MongoDB ObjectId to a Uint8Array for WebAuthn user.id
+    const userIdBytes = isoUint8Array.fromUTF8String(user._id.toString());
 
     const options = await generateRegistrationOptions({
       rpName: "NeuroWallet",
-      rpID: "localhost", // keep domain only (no http://, no port)
-      userID, // must be Buffer or Uint8Array
-      userName: email,
-      userDisplayName: email,
+      rpID: "localhost",
+      user: {
+        id: new Uint8Array(16),            // unique user ID (not email)
+        name: email,                       // email as unique machine-usable identifier
+        displayName: email.split("@")[0],  // or full name if you store it
+      },
+      pubKeyCredParams: [
+        { alg: -8, type: "public-key" },
+        { alg: -7, type: "public-key" },
+        { alg: -257, type: "public-key" },
+      ],
+      timeout: 60000,
       attestationType: "none",
+      authenticatorSelection: {
+        residentKey: "preferred",
+        userVerification: "preferred",
+      },
     });
 
-    console.log("Generated options:", options);
 
-    // Save challenge for later verification
+    // Save challenge in session
     req.session.currentChallenge = options.challenge;
 
+    console.log("Generated options:", options);
     res.json(options);
-
   } catch (err) {
-    console.error("Error generating registration options:", err);
+    console.error("Error in /generate-registration-options:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-
-// Verify Registration
-
+// -------------------- Verify Registration --------------------
 router.post("/verify-registration", async (req, res) => {
   try {
     const { email, attestationResponse } = req.body;
-    const user = await User.findOne({ email });
-    const expectedChallenge = req.session.currentChallenge;
+    if (!email || !attestationResponse) {
+      return res
+        .status(400)
+        .json({ error: "Missing email or attestationResponse" });
+    }
 
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+
+    const expectedChallenge = req.session.currentChallenge;
     if (!expectedChallenge) {
       return res.status(400).json({ error: "No challenge found in session" });
     }
@@ -73,17 +90,19 @@ router.post("/verify-registration", async (req, res) => {
     const verification = await verifyRegistrationResponse({
       response: attestationResponse,
       expectedChallenge,
-      expectedOrigin: "http://localhost:5173",
+      expectedOrigin: "http://localhost:5173", // must match your frontend URL
       expectedRPID: "localhost",
     });
+
+    console.log("Verification details:", verification);
 
     if (!verification.verified) {
       return res.status(400).json({ error: "Verification failed" });
     }
 
-    const { credentialPublicKey, credentialID, counter } = verification.registrationInfo;
+    const { credentialPublicKey, credentialID, counter } =
+      verification.registrationInfo;
 
-    // Store with userId
     await Credential.create({
       userId: user._id,
       credentialID: Buffer.from(credentialID).toString("base64url"),
@@ -99,41 +118,47 @@ router.post("/verify-registration", async (req, res) => {
 });
 
 
-// Generate Authentication Options
-router.post('/generate-authentication-options', async (req, res) => {
-  try {
-    const { username } = req.body;
 
-    const user = await User.findOne({ username });
+// Generate Authentication Options
+router.post("/generate-authentication-options", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Missing email" });
+    }
+
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     const userCredentials = (user.credentials || []).map(cred => ({
-      id: Buffer.from(cred.credentialID, 'base64url'),
-      type: 'public-key',
-      transports: cred.transports || ['usb', 'ble', 'nfc', 'internal'],
+      id: Buffer.from(cred.credentialID, "base64url"),
+      type: "public-key",
+      transports: cred.transports || ["usb", "ble", "nfc", "internal"],
     }));
 
     const options = await generateAuthenticationOptions({
       timeout: 60000,
       allowCredentials: userCredentials,
-      userVerification: 'preferred',
+      userVerification: "preferred",
     });
 
+    // ✅ Save challenge to user (not session)
     user.currentChallenge = options.challenge;
     await user.save();
 
     res.json(options);
   } catch (err) {
-    console.error('Error in /generate-authentication-options:', err);
+    console.error("❌ Error in /generate-authentication-options:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-
-// Verify Authentication
+/**
+ * Verify Authentication
+ */
 router.post("/verify-authentication", async (req, res) => {
   try {
     const { email, assertionResponse } = req.body;
@@ -147,16 +172,15 @@ router.post("/verify-authentication", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const expectedChallenge = req.session.currentChallenge;
+    const expectedChallenge = user.currentChallenge;
     if (!expectedChallenge) {
-      return res.status(400).json({ error: "No challenge found in session" });
+      return res.status(400).json({ error: "No challenge found for user" });
     }
 
-    // Lookup credential for this specific user
-    const dbCred = await Credential.findOne({
-      userId: user._id,
-      credentialID: assertionResponse.rawId, // rawId is already base64url
-    });
+    // ✅ Find credential from user model
+    const dbCred = (user.credentials || []).find(
+      cred => cred.credentialID === assertionResponse.rawId
+    );
 
     if (!dbCred) {
       console.error("❌ Credential not found for user:", email);
@@ -166,11 +190,11 @@ router.post("/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge,
-      expectedOrigin: "http://localhost:5173",
-      expectedRPID: "localhost",
+      expectedOrigin: process.env.EXPECTED_ORIGIN || "http://localhost:5173",
+      expectedRPID: process.env.EXPECTED_RPID || "localhost",
       authenticator: {
         credentialID: Buffer.from(dbCred.credentialID, "base64url"),
-        credentialPublicKey: Buffer.from(dbCred.credentialPublicKey, "base64"),
+        credentialPublicKey: Buffer.from(dbCred.credentialPublicKey, "base64url"),
         counter: dbCred.counter,
       },
     });
@@ -180,16 +204,18 @@ router.post("/verify-authentication", async (req, res) => {
       return res.status(400).json({ error: "Verification failed" });
     }
 
-    // Update counter to prevent replay attacks
+    // ✅ Update counter to prevent replay attacks
     dbCred.counter = verification.authenticationInfo.newCounter;
-    await dbCred.save();
+    user.currentChallenge = undefined; // clear challenge after use
+    await user.save();
 
     res.json({ verified: true });
   } catch (err) {
-    console.error("Error in /verify-authentication:", err);
+    console.error("❌ Error in /verify-authentication:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 
