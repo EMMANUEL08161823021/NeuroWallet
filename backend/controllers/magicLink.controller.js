@@ -31,7 +31,7 @@ async function requestMagicLink(req, res, next) {
     });
 
     if (user) {
-      const url = new URL("https://neuro-wallet.vercel.app/api/auth/magic/verify"); // ✅ fixed route
+      const url = new URL("https://neurowallet.onrender.com/api/auth/magic/verify"); // ✅ fixed route
       url.searchParams.set("token", rawToken);
       if (clientNonce) url.searchParams.set("nonce", clientNonce);
       url.searchParams.set("redirect", "/dashboard");
