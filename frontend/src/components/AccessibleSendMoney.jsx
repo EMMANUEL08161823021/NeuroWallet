@@ -114,9 +114,11 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
       setStage("amount");
 
-      listenForAmount();
+      setTimeout(() => {
+        listenForAmount();
+      }, 5000);
 
-      
+
       setStatus(`Captured ${accMatch ? "account number" : "no account found"} ${bankMatch ? "and bank" : ""}. Asking for amount.`);
       speak(bankMatch ? `Account number ${accMatch ? accMatch[0].split('').join('-') : 'not found'}, ${bankMatch[0]}. How much do you want to send?` : "Account details captured. How much do you want to send?");
       // wait a moment for TTS to finish then start listening? we'll let user press Speak Amount
