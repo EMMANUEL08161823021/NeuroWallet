@@ -17,8 +17,8 @@ const base64url = require('base64url');
 
 
 // Generate Registration Options
-const rpID = "localhost";
-const origin = "http://localhost:5173";
+// const rpID = "localhost";
+// const origin = "http://localhost:5173";
 
 // -------------------- Generate Registration Options --------------------
 router.post("/generate-registration-options", async (req, res) => {
@@ -29,7 +29,7 @@ router.post("/generate-registration-options", async (req, res) => {
 
     const options = await generateRegistrationOptions({
       rpName: "NeuroWallet",
-      rpID: "localhost",
+      rpID: "neuro-wallet.vercel.app",
       userName: user.email,
       userID: Buffer.from(user._id.toString()), // unique ID for WebAuthn
     });
@@ -59,8 +59,8 @@ router.post("/verify-registration", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const expectedOrigin = "http://localhost:5173";
-    const expectedRPID = "localhost";
+    const expectedOrigin = "https://neuro-wallet.vercel.app";
+    const expectedRPID = "neuro-wallet.vercel.app";
 
     const verification = await verifyRegistrationResponse({
       response: attestationResponse,
@@ -167,8 +167,8 @@ router.post("/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
-      expectedOrigin: "http://localhost:5173",
-      expectedRPID: "localhost",
+      expectedOrigin: "http://neuro-wallet.vercel.app",
+      expectedRPID: "neuro-wallet.vercel.app",
       credential: {
         id: matchingCred.credentialID,
         publicKey: Buffer.from(matchingCred.credentialPublicKey, "base64"),
