@@ -265,19 +265,19 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto">
+    <div className="p-6 max-w-md mx-auto bg-white dark:bg-gray-900 dark:text-gray-100">
       <h2 className="text-2xl font-bold mb-4">Send Money (Accessible)</h2>
 
       {/* live region for screen readers */}
       <div aria-live="polite" ref={liveRef} className="sr-only" />
 
       {/* status visible for everyone */}
-      <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+      <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm">
         <strong>Status:</strong> {status}
       </div>
 
-      {/* debug / extracted OCR text (hidden from screen readers normally) */}
-      <details className="mt-3 text-xs text-gray-500">
+      {/* debug / extracted OCR text */}
+      <details className="mt-3 text-xs text-gray-500 dark:text-gray-400">
         <summary>OCR debug</summary>
         <pre className="whitespace-pre-wrap text-xs">{ocrText || "—"}</pre>
       </details>
@@ -285,10 +285,13 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       {/* Stage-based UI */}
       {stage === "idle" && (
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">Tap the button to start sending money. The app will guide you with voice and screen reader messages.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Tap the button to start sending money. The app will guide you with
+            voice and screen reader messages.
+          </p>
           <button
             onClick={startCamera}
-            className="w-full bg-blue-600 text-white py-6 rounded-lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-lg"
             aria-label="Start send money flow"
           >
             Send Money
@@ -298,52 +301,81 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
       {stage === "camera" && (
         <div className="space-y-4">
-          <Webcam 
-          audio={false} 
-          ref={webcamRef} 
-          screenshotFormat="image/png"  
-          videoConstraints={{
-            facingMode: "environment", // ✅ Prefer back camera (more reliable than exact)
-          }} 
-          className="rounded-lg w-full h-60 object-cover" />
+          <Webcam
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat="image/png"
+            videoConstraints={{ facingMode: "environment" }}
+            className="rounded-lg w-full h-60 object-cover border border-gray-200 dark:border-gray-700"
+          />
           <div className="flex gap-2">
-            <button onClick={snapAndOcr} className="flex-1 bg-indigo-600 text-white py-3 rounded-lg">Snap</button>
-            <button onClick={()=>{ setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }} className="flex-1 bg-gray-200 py-3 rounded-lg">Cancel</button>
+            <button
+              onClick={snapAndOcr}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg"
+            >
+              Snap
+            </button>
+            <button
+              onClick={() => {
+                setStage("idle");
+                setStatus("Cancelled");
+                speak("Cancelled");
+              }}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 py-3 rounded-lg"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
       {stage === "amount" && (
         <div className="space-y-4">
-          <div className="bg-gray-50 p-3 rounded">
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
             <p><strong>Detected:</strong></p>
             <p>Bank: <span className="font-medium">{bankName || "Not found"}</span></p>
             <p>Account: <span className="font-medium">{accountNumber || "Not found"}</span></p>
           </div>
 
-          <button onClick={listenForAmount} className="w-full bg-green-600 text-white py-3 rounded-lg" aria-label="Speak amount">Speak Amount</button>
-          <p className="text-sm text-gray-500">Or type amount below</p>
-          <input value={amount} onChange={(e)=>setAmount(e.target.value)} placeholder="Amount (NGN)" inputMode="numeric" className="w-full p-2 border rounded" />
+          <button
+            onClick={listenForAmount}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg"
+            aria-label="Speak amount"
+          >
+            Speak Amount
+          </button>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Or type amount below</p>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Amount (NGN)"
+            inputMode="numeric"
+            className="w-full p-2 border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+          />
         </div>
       )}
 
       {stage === "confirm" && (
         <div className="space-y-4">
-          <div className="bg-gray-50 p-3 rounded">
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
             <p><strong>Confirm Transfer</strong></p>
             <p>Bank: <span className="font-medium">{bankName}</span></p>
             <p>Account: <span className="font-medium">{accountNumber}</span></p>
             <p>Amount: <span className="font-medium">₦{amount}</span></p>
           </div>
 
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Place your finger on the fingerprint console below to confirm.  
             Or tap Cancel to go back.
           </p>
 
           <button
-            onClick={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }}
-            className="w-full bg-gray-200 py-3 rounded-lg"
+            onClick={() => {
+              setStage("idle");
+              setStatus("Cancelled");
+              speak("Cancelled");
+            }}
+            className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 py-3 rounded-lg"
           >
             Cancel
           </button>
@@ -359,10 +391,21 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       {stage === "done" && (
         <div className="space-y-4">
           <p className="font-semibold">{status}</p>
-          <button onClick={()=>{ setStage("idle"); setStatus("Ready"); setAccountNumber(""); setBankName(""); setAmount(""); }} className="w-full bg-blue-600 text-white py-3 rounded-lg">Done</button>
+          <button
+            onClick={() => {
+              setStage("idle");
+              setStatus("Ready");
+              setAccountNumber("");
+              setBankName("");
+              setAmount("");
+            }}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg"
+          >
+            Done
+          </button>
         </div>
       )}
-
     </div>
+
   );
 }

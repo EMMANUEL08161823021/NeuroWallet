@@ -118,14 +118,14 @@ router.post("/generate-authentication-options", async (req, res) => {
     console.log("🔎 userCreds:", userCreds);
 
     const allowCredentials = userCreds
-      .filter(cred => !!cred.credentialID)
-      .map(cred => ({
-        id: cred.credentialID, // ✅ keep as base64url string
-        type: "public-key",
-        transports: cred.transports && cred.transports.length > 0
-          ? cred.transports
-          : ["usb", "ble", "nfc", "internal"],
-      }));
+    .filter(cred => !!cred.credentialID)
+    .map(cred => ({
+      id: cred.credentialID, // ✅ keep as base64url string
+      type: "public-key",
+      transports: cred.transports && cred.transports.length > 0
+        ? cred.transports
+        : ["usb", "ble", "nfc", "internal"],
+    }));
 
     const options = await generateAuthenticationOptions({
       timeout: 60000,
@@ -196,15 +196,6 @@ router.post("/verify-authentication", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
-
-
-
-
-
-
 
 
 module.exports = router;
