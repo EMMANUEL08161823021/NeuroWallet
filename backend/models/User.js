@@ -1,4 +1,3 @@
-
 // models/User.js
 const { Schema, model } = require("mongoose");
 const bcrypt = require("bcrypt");
@@ -10,6 +9,9 @@ const userSchema = new Schema(
     pinHash: String,
     hasPasskey: { type: Boolean, default: false },
     recentAuthAt: Date,
+
+    // 👇 New field for WebAuthn challenge
+    currentChallenge: { type: String },
   },
   { timestamps: true }
 );

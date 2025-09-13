@@ -16,8 +16,6 @@ export default function Login() {
   const setNotice = (type, text) => setMsg({ type, text });
 
 
-  
-  
 
   // --- PIN login ---
   const onPinLogin = async (e) => {
@@ -49,96 +47,77 @@ export default function Login() {
     }
   };
 
+  function bufferToBase64URL(buffer) {
+    if (!buffer) return null;
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+  }
+
+  function attestationToJSON(credential) {
+    if (!credential) return null;
+
+    return {
+      id: credential.id,
+      rawId: bufferToBase64URL(credential.rawId),
+      type: credential.type,
+      response: {
+        clientDataJSON: bufferToBase64URL(credential.response.clientDataJSON),
+        attestationObject: bufferToBase64URL(credential.response.attestationObject),
+      },
+    };
+  }
+
+
+
   // --- Passkey Registration (for sign-up, can also be used after login to enroll) ---
   const onPasskeyRegister = async () => {
     setBusy(true);
     setMsg(null);
 
     try {
-      // 1. Get registration options from backend
+      // 1. Get registration options
       const { data: options } = await api.post(
-        "http://localhost:9000/api/webauthn/generate-registration-options",
+        "https://neurowallet.onrender.com/api/webauthn/generate-registration-options",
         { email }
       );
 
-      if (!options) {
-        throw new Error("No registration options returned");
-      }
-
-      // ✅ Ensure `name` and `displayName` exist
-      if (!options.user.name) {
-        options.user.name = email; // use email as login name
-      }
-      if (!options.user.displayName) {
-        options.user.displayName = email; // fallback if no full name available
-      }
-
-      console.log("Fixed options before calling WebAuthn:", options);
-
-      // 2. Prepare options for navigator
+      // 2. Prepare options
       const publicKey = prepPublicKeyOptions(options);
 
-      // 3. Ask authenticator to create credentials
+      // 3. Ask authenticator
       const credential = await navigator.credentials.create({ publicKey });
+      if (!credential) throw new Error("No credential created");
 
-      if (!credential) {
-        throw new Error("No credential created by authenticator");
-      }
-
-      // 4. Convert attestation to JSON-safe format
+      // 4. Convert
       const attestationResponse = attestationToJSON(credential);
 
-      // 5. Send attestation back to server for verification & storage
-      const { data: verify } = await api.post(
-        "http://localhost:9000/api/webauthn/verify-registration",
-        { email, attestationResponse }
-      );
+      // 5. Send to backend
+      const verifyRes = await fetch("https://neurowallet.onrender.com/api/webauthn/verify-registration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, attestationResponse }),
+      });
 
-      // 6. UI feedback
-      if (verify?.verified) {
-        setNotice("ok", "✅ Passkey created! You can now sign in with passkey.");
-        setTab("login");
+      const result = await verifyRes.json();
+      console.log("Verify result:", result);
+
+      // 6. UI Feedback
+      if (result.success) {
+        setNotice("ok", "✅ Passkey registered successfully! You can now log in with your device.");
+        setTab("login"); // redirect user to login tab
       } else {
-        setNotice("err", "❌ Passkey registration failed on verification.");
+        setNotice("err", "❌ Passkey registration failed. Please try again.");
       }
     } catch (err) {
       console.error("Passkey registration error:", err);
-      setNotice("err", "⚠️ Passkey registration failed.");
+      setNotice("err", "⚠️ Something went wrong during registration.");
     } finally {
       setBusy(false);
     }
   };
 
-
-
-  // --- Passkey Authentication (login) ---
-  // Utility: ArrayBuffer → base64url
-  function bufferToBase64url(buffer) {
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    for (let b of bytes) {
-      binary += String.fromCharCode(b);
-    }
-    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  }
-
-// Convert the assertion into JSON-safe format
-  function assertionToJSON(assertion) {
-    if (!assertion) return null;
-    return {
-      id: assertion.id,
-      type: assertion.type,
-      rawId: bufferToBase64url(assertion.rawId),
-      response: {
-        clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
-        authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
-        signature: bufferToBase64url(assertion.response.signature),
-        userHandle: assertion.response.userHandle
-          ? bufferToBase64url(assertion.response.userHandle)
-          : null,
-      },
-    };
-  }
 
   const onPasskeyLogin = async () => {
     setBusy(true);
@@ -147,7 +126,7 @@ export default function Login() {
     try {
       // 1️⃣ Get challenge/options from backend
       const { data: options } = await api.post(
-        "http://localhost:9000/api/webauthn/generate-authentication-options",
+        "https://neurowallet.onrender.com/api/webauthn/generate-authentication-options",
         { email }
       );
 
@@ -161,7 +140,7 @@ export default function Login() {
 
       // 4️⃣ Send to backend for verification
       const { data: verify } = await api.post(
-        "http://localhost:9000/api/webauthn/verify-authentication",
+        "https://neurowallet.onrender.com/api/webauthn/verify-authentication",
         {
           email,
           assertionResponse: auth,

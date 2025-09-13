@@ -39,7 +39,7 @@ const features = [
     icon: <Fingerprint className="h-8 w-8 text-purple-600" />,
     title: "Multi-Modal Login",
     description:
-      "Choose between biometrics, PIN, or voice login — empowering everyone to bank their own way.",
+      "Choose between biometrics, PIN, or Magic Link  — empowering everyone to bank their own way.",
   },
 ];
 
@@ -490,11 +490,10 @@ const LandingPage = () => {
                 <span className="bg-blue-600 text-white whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-full">
                   Step 2
                 </span>
-                <h2 className="text-xl font-semibold text-gray-800">Voice Commands</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Magic Link</h2>
               </div>
               <p className="text-gray-600">
-                Set up biometrics, create a PIN, or use voice recognition —
-                choose the method that works best for you.
+                Enter your email to receive a secure login link — no password required.
               </p>
             </div>
 
