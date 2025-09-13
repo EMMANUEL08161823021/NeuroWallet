@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { api } from "../../api/client";
 import { prepPublicKeyOptions, attestationToJSON, assertionToJSON } from "../../utils/webauthn";
 import { useNavigate, Link } from "react-router-dom";
+import { KeyRound, Mail, Fingerprint  } from "lucide-react";
 
 const PASSKEY_BASE = `${import.meta.env.VITE_BACKEND_URL}/api/webauthn`; // adjust if your router is mounted elsewhere (e.g. "/webauthn")
 
@@ -163,54 +164,90 @@ export default function Login() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-lg font-semibold">NeuroWallet — Secure Access</h1>
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 px-4">
+      <div
+        className="w-full max-w-md border border-gray-300 dark:border-gray-700 rounded-xl shadow-md bg-white dark:bg-gray-800"
+        role="main"
+        aria-labelledby="pageTitle"
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-gray-300 dark:border-gray-700">
+          <h1 id="pageTitle" className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            NeuroWallet — Secure Access
+          </h1>
         </div>
 
+        {/* Content */}
         <div className="p-6">
-          <div className="flex gap-2 mb-6">
+          {/* Tabs */}
+          <div role="tablist" aria-label="Authentication options" className="flex gap-2 mb-6">
             <button
+              role="tab"
+              aria-selected={tab === "login"}
+              aria-controls="login-panel"
+              id="login-tab"
               onClick={() => setTab("login")}
-              className={`px-3 py-2 rounded-md text-sm font-medium ${tab==="login" ? "bg-blue-600 text-white":"bg-gray-100 text-gray-700"}`}
+              className={`px-3 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600
+                ${tab === "login" 
+                  ? "bg-blue-600 text-white" 
+                  : "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-200"}`}
             >
               Log in
             </button>
             <button
+              role="tab"
+              aria-selected={tab === "signup"}
+              aria-controls="signup-panel"
+              id="signup-tab"
               onClick={() => setTab("signup")}
-              className={`px-3 py-2 rounded-md text-sm font-medium ${tab==="signup" ? "bg-blue-600 text-white":"bg-gray-100 text-gray-700"}`}
+              className={`px-3 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600
+                ${tab === "signup" 
+                  ? "bg-blue-600 text-white" 
+                  : "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-200"}`}
             >
               Sign up
             </button>
           </div>
 
+          {/* Live region for messages */}
           {msg && (
-            <div className={`mb-4 text-sm px-3 py-2 rounded border
-              ${msg.type==="ok" ? "bg-green-50 text-green-700 border-green-200":"bg-red-50 text-red-700 border-red-200"}`}>
-              {msg.text}
+            <div
+              className={`mb-4 text-sm px-3 py-2 rounded border`}
+              role="alert"
+              aria-live="assertive"
+            >
+              <span className={
+                msg.type==="ok" 
+                  ? "text-green-700 dark:text-green-400 font-medium" 
+                  : "text-red-700 dark:text-red-400 font-medium"
+              }>
+                {msg.text}
+              </span>
             </div>
           )}
 
-          {/* Shared email field */}
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+          {/* Shared Email */}
+          <label htmlFor="email" className="block text-sm font-medium text-gray-900 dark:text-gray-200 mb-1">
+            Email address
           </label>
           <input
             id="email"
             type="email"
+            autoComplete="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e)=>setEmail(e.target.value)}
-            className="w-full mb-4 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-required="true"
+            required
+            className="w-full mb-4 px-3 py-2 border border-gray-400 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
 
+          {/* LOGIN PANEL */}
           {tab === "login" && (
-            <>
-              {/* PIN form */}
+            <div id="login-panel" role="tabpanel" aria-labelledby="login-tab">
               <form onSubmit={onPinLogin} className="space-y-3">
-                <label htmlFor="pin" className="block text-sm font-medium text-gray-700">
-                  PIN
+                <label htmlFor="pin" className="block text-sm font-medium text-gray-900 dark:text-gray-200">
+                  6-digit PIN
                 </label>
                 <input
                   id="pin"
@@ -218,78 +255,98 @@ export default function Login() {
                   pattern="[0-9]*"
                   maxLength={6}
                   placeholder="••••••"
+                  aria-required="true"
                   value={pin}
                   onChange={(e)=>setPin(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-400 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
                 <button
                   type="submit"
                   disabled={busy}
-                  className="w-full h-10 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60"
+                  className="w-full h-10 rounded-md bg-blue-600 cursor-pointer text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-700 disabled:opacity-60"
                 >
-                  {busy ? "Signing in..." : "Sign in with PIN"}
+                  {busy ? "Signing in…" : "Sign in with PIN"}
                 </button>
               </form>
 
               {/* Divider */}
-              <div className="flex items-center my-4">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="px-3 text-xs text-gray-500">or</span>
-                <div className="flex-1 h-px bg-gray-200" />
+              <div className="flex items-center my-4" aria-hidden="true">
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+                <span className="px-3 text-xs text-gray-600 dark:text-gray-400">or</span>
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
               </div>
 
               {/* Passkey + Magic link */}
-              <div className="grid gap-2">
+              <div className="flex gap-6 justify-center">
+                {/* Magic Link Button */}
+                <button
+                  onClick={onMagicLink}
+                  disabled={busy || !email}
+                  className="w-25 h-25 flex items-center cursor-pointer justify-center rounded-full border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-green-600 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-60"
+                  aria-label="Email me a Magic Link"
+                >
+                  <Mail size={80} strokeWidth={1.5}/>
+                </button>
+
+                {/* Passkey Button */}
                 <button
                   onClick={onPasskeyLogin}
                   disabled={busy || !("credentials" in navigator)}
-                  className="w-full h-10 rounded-md border border-gray-300 bg-white hover:bg-gray-50 font-medium disabled:opacity-60"
+                  className="w-25 h-25 flex items-center cursor-pointer justify-center rounded-full border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-60"
+                  aria-label="Use Passkey"
                 >
-                  Use Passkey
-                </button>
-                <button
-                  onClick={onMagicLink}
-                  disabled={busy || !email}
-                  className="w-full h-10 rounded-md border border-gray-300 bg-white hover:bg-gray-50 font-medium disabled:opacity-60"
-                >
-                  Email me a magic link
+                  <Fingerprint size={80} strokeWidth={1.5} />
                 </button>
               </div>
-            </>
+            </div>
           )}
 
+          {/* SIGNUP PANEL */}
           {tab === "signup" && (
-            <>
-              <p className="text-sm text-gray-600 mb-3">
+            <div id="signup-panel" role="tabpanel" aria-labelledby="signup-tab">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
                 Create your account with a magic link or a passkey. You can add a PIN later.
               </p>
-              <div className="grid gap-2">
+              <div className="flex gap-6 justify-center">
+                {/* Magic Link Button */}
                 <button
                   onClick={onMagicLink}
                   disabled={busy || !email}
-                  className="w-full h-10 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60"
+                  className="w-25 h-25 flex items-center cursor-pointer justify-center rounded-full border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-green-600 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-60"
+                  aria-label="Email me a Magic Link"
                 >
-                  Continue with Email (Magic Link)
+                  <Mail size={80} strokeWidth={1.5} />
                 </button>
+
+                {/* Passkey Button */}
                 <button
                   onClick={onPasskeyRegister}
                   disabled={busy || !("credentials" in navigator)}
-                  className="w-full h-10 rounded-md border border-gray-300 bg-white hover:bg-gray-50 font-medium disabled:opacity-60"
+                  className="w-25 h-25 flex items-center cursor-pointer justify-center rounded-full border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-60"
+                  aria-label="Use Passkey"
                 >
-                  Create Passkey
+                  <Fingerprint size={80} strokeWidth={1.5} />
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-3">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-3">
                 Tip: After you’re in, set a 6-digit PIN for quick confirmations.
               </p>
-            </>
+            </div>
           )}
 
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <Link to="/" className="underline underline-offset-2 hover:text-gray-800">Back to Home</Link>
+          {/* Footer */}
+          <div className="mt-6 text-center text-sm">
+            <Link 
+              to="/" 
+              className="underline underline-offset-2 text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            >
+              Back to Home
+            </Link>
           </div>
         </div>
       </div>
     </div>
+
+
   );
 }
