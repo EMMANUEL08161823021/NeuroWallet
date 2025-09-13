@@ -3,6 +3,7 @@ import { api } from "../../api/client";
 import { prepPublicKeyOptions, attestationToJSON, assertionToJSON } from "../../utils/webauthn";
 import { useNavigate, Link } from "react-router-dom";
 import { KeyRound, Mail, Fingerprint  } from "lucide-react";
+import Logo from "../../../public/logo.png"
 
 const PASSKEY_BASE = `${import.meta.env.VITE_BACKEND_URL}/api/webauthn`; // adjust if your router is mounted elsewhere (e.g. "/webauthn")
 
@@ -171,10 +172,16 @@ export default function Login() {
         aria-labelledby="pageTitle"
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-300 dark:border-gray-700">
-          <h1 id="pageTitle" className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            NeuroWallet — Secure Access
-          </h1>
+        <div className="py-3 px-5 border-b border-gray-300 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+
+            <logo>
+              <img src={Logo} className="h-10 w-10" alt="logo"/>
+            </logo>
+            <h1 id="pageTitle" className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              NeuroWallet — Secure Access
+            </h1>
+          </div>
         </div>
 
         {/* Content */}
