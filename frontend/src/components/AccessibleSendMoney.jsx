@@ -113,6 +113,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       setBankName(bankMatch ? bankMatch[0] : "");
 
       setStage("amount");
+      listenForAmount();
       setStatus(`Captured ${accMatch ? "account number" : "no account found"} ${bankMatch ? "and bank" : ""}. Asking for amount.`);
       speak(bankMatch ? `Account number ${accMatch ? accMatch[0].split('').join('-') : 'not found'}, ${bankMatch[0]}. How much do you want to send?` : "Account details captured. How much do you want to send?");
       // wait a moment for TTS to finish then start listening? we'll let user press Speak Amount
@@ -337,13 +338,13 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
             <p>Account: <span className="font-medium">{accountNumber || "Not found"}</span></p>
           </div>
 
-          <button
+          {/* <button
             onClick={listenForAmount}
             className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg"
             aria-label="Speak amount"
           >
             Speak Amount
-          </button>
+          </button> */}
           <p className="text-sm text-gray-500 dark:text-gray-400">Or type amount below</p>
           <input
             value={amount}
