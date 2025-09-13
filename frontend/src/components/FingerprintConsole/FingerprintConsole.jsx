@@ -1,9 +1,11 @@
 // src/components/FingerprintConsole.jsx
 import { useState, useRef } from "react";
+import { Fingerprint } from "lucide-react"; // unique fingerprint icon
 
-export default function FingerprintConsole() {
+export default function FingerprintConsole({ onCancel }) {
   const [status, setStatus] = useState("Ready");
   const pressTimer = useRef(null);
+  const lastTap = useRef(0);
 
   // 🎤 Voice Recognition
   const startVoiceCommand = () => {
@@ -40,43 +42,62 @@ export default function FingerprintConsole() {
     }
   };
 
-  // 👆 Handle Tap vs Hold
+  // ❌ Cancel Transaction
+  const cancelTransfer = () => {
+    setStatus("❌ Transfer Cancelled");
+    speak("Transaction cancelled");
+    if (onCancel) onCancel();
+  };
+
+  // 👆 Handle Press (hold detection)
   const handlePress = () => {
     pressTimer.current = setTimeout(() => {
-      performTransfer(); // long hold
+      performTransfer(); // hold ≥1s → confirm transfer
     }, 1000);
   };
 
+  // 👆 Handle Release (tap / double tap)
   const handleRelease = () => {
     if (pressTimer.current) {
       clearTimeout(pressTimer.current);
-      if (status === "Ready") startVoiceCommand(); // tap
     }
+
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      cancelTransfer(); // double tap detected
+    } else {
+      if (status === "Ready") {
+        startVoiceCommand(); // single tap
+      }
+    }
+    lastTap.current = now;
   };
 
   return (
-    <div className="flex gap-2 items-center justify-center w-full h-full">
+    <div className="flex flex-col items-center gap-4">
+      {/* Fingerprint Button */}
       <div
         role="button"
         tabIndex={0}
-        aria-label="Voice command: tap to speak. Hold to confirm transfer"
+        aria-label="Tap to speak. Hold 1s to confirm transfer. Double tap to cancel."
         onMouseDown={handlePress}
         onMouseUp={handleRelease}
         onTouchStart={handlePress}
         onTouchEnd={handleRelease}
-        // onKeyDown={(e) => { if (e.key === "Enter") startListening(); }}
-        className="w-40 h-40 rounded-full bg-blue-600  active:bg-blue-700 flex items-center justify-center shadow-2xl"
-        >
-        <div className="text-center">
-          <div className="text-4xl">🔊</div>
-          <div className="mt-2 text-lg font-semibold">Tap to Speak</div>
-          <div className="text-sm mt-1">Hold to Confirm</div>
-        </div>
+        className="w-40 h-40 rounded-full bg-blue-600 active:bg-blue-700 flex items-center justify-center shadow-2xl text-white"
+      >
+        <Fingerprint size={80} strokeWidth={1.5} />
       </div>
-      
-      {/* <p className="mt-2 text-xl">{status}</p> */}
+
+      {/* Instructions */}
+      {/* <div className="text-center text-sm text-gray-600 space-y-1">
+        <p>👆 Tap → Speak</p>
+        <p>✋ Hold → Confirm</p>
+        <p>👆👆 Double Tap → Cancel</p>
+      </div> */}
+
+      {/* Status */}
+      <div className="mt-2 text-base font-medium">{status}</div>
     </div>
   );
 }
-
-      
