@@ -109,25 +109,22 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       const accMatch = text.match(/\b\d{9,12}\b/);
       const bankMatch = text.match(/\b(Access|GTB|UBA|Zenith|First\s+Bank|FirstBank|Union|Fidelity|Ecobank|Polaris|Sterling|FCMB|Wema|Stanbic|GTBank)\b/i);
 
-      
-      if(!accMatch || !bankMatch){
-        setStage("camera")
+      if (!accMatch || !bankMatch) {
+        setStage("camera");
       } else {
-        
-        setAccountNumber(accMatch);
-        setBankName(bankMatch);
+        setAccountNumber(accMatch[0]);  // ✅ use [0]
+        setBankName(bankMatch[0]);      // ✅ use [0]
         setStage("amount");
-        
+
+        // ✅ only start listening if details are valid
+        listenForAmount();
+  
+        setStatus(`Captured ${accMatch ? "account number" : "no account found"} ${bankMatch ? "and bank" : ""}. Asking for amount.`);
+        speak(bankMatch ? `Account number ${accMatch ? accMatch[0].split('').join('-') : 'not found'}, ${bankMatch[0]}. How much do you want to send?` : "Account details captured. How much do you want to send?");
       }
 
 
-      setTimeout(() => {
-        listenForAmount();
-      }, 7000);
 
-
-      setStatus(`Captured ${accMatch ? "account number" : "no account found"} ${bankMatch ? "and bank" : ""}. Asking for amount.`);
-      speak(bankMatch ? `Account number ${accMatch ? accMatch[0].split('').join('-') : 'not found'}, ${bankMatch[0]}. How much do you want to send?` : "Account details captured. How much do you want to send?");
       // wait a moment for TTS to finish then start listening? we'll let user press Speak Amount
     } catch (err) {
       console.error("OCR error", err);
