@@ -112,8 +112,12 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       setAccountNumber(accMatch ? accMatch[0] : "");
       setBankName(bankMatch ? bankMatch[0] : "");
 
-      setStage("amount");
-      listenForAmount();
+      setTimeout(() => {
+        // setStage("amount");
+        listenForAmount();
+      }, 3000);     
+      
+      
       setStatus(`Captured ${accMatch ? "account number" : "no account found"} ${bankMatch ? "and bank" : ""}. Asking for amount.`);
       speak(bankMatch ? `Account number ${accMatch ? accMatch[0].split('').join('-') : 'not found'}, ${bankMatch[0]}. How much do you want to send?` : "Account details captured. How much do you want to send?");
       // wait a moment for TTS to finish then start listening? we'll let user press Speak Amount
@@ -125,56 +129,67 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   };
 
   // Step 3: listen for amount
-  const listenForAmount = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setStatus("Voice input not supported on this device.");
-      speak("Voice input not supported on this device. Please type the amount.");
-      return;
-    }
+const listenForAmount = () => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    setStatus("Voice input not supported on this device.");
+    speak("Voice input not supported on this device. Please type the amount.");
+    return;
+  }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-NG";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-NG";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => {
-      setListening(true);
-      setStatus("Listening for amount...");
-      speak("Listening for amount. Please say the amount now.");
-    };
-
-    recognition.onresult = (ev) => {
-      setListening(false);
-      const transcript = ev.results[0][0].transcript;
-      const parsed = parseAmountFromSpeech(transcript);
-      if (parsed && !isNaN(parsed)) {
-        setAmount(String(parsed));
-        setStatus(`Amount set to ₦${parsed}`);
-        speak(`Amount set to naira ${parsed}`);
-        setStage("confirm");
-        // read full confirmation
-        const confirmMsg = `You are sending naira ${parsed} to ${bankName || 'the recipient'}, account number ${accountNumber || 'unknown'}. Place your finger to confirm.`;
-        setTimeout(()=> speak(confirmMsg), 500);
-      } else {
-        setStatus("Could not understand amount. Please try again.");
-        speak("Could not understand the amount. Please try again.");
-      }
-    };
-
-    recognition.onerror = (err) => {
-      console.error("Speech error", err);
-      setListening(false);
-      setStatus("Voice recognition error");
-      speak("Voice recognition error. Please try again.");
-    };
-
-    recognition.onend = () => {
-      setListening(false);
-    };
-
-    recognition.start();
+  recognition.onstart = () => {
+    setListening(true);
+    setStatus("Listening for amount...");
+    speak("Listening for amount. How much do you want to send to the recipient? Please say the amount now.");
   };
+
+  recognition.onresult = (ev) => {
+    setListening(false);
+    const transcript = ev.results[0][0].transcript;
+    const parsed = parseAmountFromSpeech(transcript);
+
+    if (parsed && !isNaN(parsed)) {
+      setAmount(String(parsed));
+      setStatus(`Amount set to ₦${parsed}`);
+      speak(`Amount set to naira ${parsed}`);
+      setStage("confirm");
+
+      // read full confirmation
+      const confirmMsg = `You are sending naira ${parsed} to ${bankName || 'the recipient'}, account number ${accountNumber || 'unknown'}. Place your finger to confirm.`;
+      setTimeout(() => speak(confirmMsg), 500);
+    } else {
+      setStatus("Could not understand amount. Please try again.");
+      speak("Could not understand the amount. Please say it again.");
+      // 🔁 Restart listening
+      setTimeout(() => listenForAmount(), 1500);
+    }
+  };
+
+  recognition.onerror = (err) => {
+    console.error("Speech error", err);
+    setListening(false);
+    setStatus("Voice recognition error");
+    speak("Voice recognition error. Please try again.");
+    // 🔁 Restart listening
+    setTimeout(() => listenForAmount(), 2000);
+  };
+
+  recognition.onend = () => {
+    setListening(false);
+    // if amount not set, keep retrying
+    if (!amount) {
+      setTimeout(() => listenForAmount(), 2000);
+    }
+  };
+
+  recognition.start();
+};
+
 
   // generate idempotency key
   const genIdempotency = () => {
