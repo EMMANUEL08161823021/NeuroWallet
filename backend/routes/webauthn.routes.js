@@ -167,7 +167,7 @@ router.post("/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
-      expectedOrigin: "http://neuro-wallet.vercel.app",
+      expectedOrigin: "https://neuro-wallet.vercel.app",
       expectedRPID: "neuro-wallet.vercel.app",
       credential: {
         id: matchingCred.credentialID,
