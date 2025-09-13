@@ -1,11 +1,11 @@
 // src/components/FingerprintConsole.jsx
 import { useState, useRef } from "react";
-import { Fingerprint } from "lucide-react"; // unique fingerprint icon
+import { Fingerprint } from "lucide-react";
 
 export default function FingerprintConsole({ onCancel }) {
   const [status, setStatus] = useState("Ready");
-  const pressTimer = useRef(null);
-  const lastTap = useRef(0);
+  const pressStartTime = useRef(null);
+  const touchStartX = useRef(null);
 
   // 🎤 Voice Recognition
   const startVoiceCommand = () => {
@@ -32,7 +32,7 @@ export default function FingerprintConsole({ onCancel }) {
 
   // 💸 Fake Transfer
   const performTransfer = () => {
-    const success = Math.random() > 0.3; // 70% success
+    const success = Math.random() > 0.3;
     if (success) {
       setStatus("✅ Transfer Successful");
       speak("Transfer successful");
@@ -49,51 +49,63 @@ export default function FingerprintConsole({ onCancel }) {
     if (onCancel) onCancel();
   };
 
-  // 👆 Handle Press (hold detection)
+  // 👆 Handle press (for tap/hold)
   const handlePress = () => {
-    pressTimer.current = setTimeout(() => {
-      performTransfer(); // hold ≥1s → confirm transfer
-    }, 1000);
+    pressStartTime.current = Date.now();
   };
 
-  // 👆 Handle Release (tap / double tap)
   const handleRelease = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
+    if (!pressStartTime.current) return;
+    const pressDuration = Date.now() - pressStartTime.current;
+
+    if (pressDuration < 1000) {
+      startVoiceCommand(); // Tap
+    } else {
+      performTransfer(); // Hold confirm
+    }
+    pressStartTime.current = null;
+  };
+
+  // 👉 Handle swipe cancel
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    pressStartTime.current = Date.now();
+  };
+
+  const handleTouchEnd = (e) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const deltaX = touchEndX - touchStartX.current;
+
+    if (deltaX < -50) {
+      // Swiped left
+      cancelTransfer();
+    } else {
+      handleRelease();
     }
 
-    const now = Date.now();
-    if (now - lastTap.current < 300) {
-      cancelTransfer(); // double tap detected
-    } else {
-      if (status === "Ready") {
-        startVoiceCommand(); // single tap
-      }
-    }
-    lastTap.current = now;
+    touchStartX.current = null;
   };
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Fingerprint Button */}
       <div
         role="button"
         tabIndex={0}
-        aria-label="Tap to speak. Hold 1s to confirm transfer. Double tap to cancel."
+        aria-label="Tap to speak. Hold to confirm transfer. Swipe left to cancel."
         onMouseDown={handlePress}
         onMouseUp={handleRelease}
-        onTouchStart={handlePress}
-        onTouchEnd={handleRelease}
-        className="w-40 h-40 rounded-full bg-blue-600 active:bg-blue-700 flex items-center justify-center shadow-2xl text-white"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="w-40 h-40 rounded-full bg-blue-600 active:bg-blue-700 flex items-center justify-center shadow-2xl text-white select-none"
       >
         <Fingerprint size={80} strokeWidth={1.5} />
       </div>
 
       {/* Instructions */}
       {/* <div className="text-center text-sm text-gray-600 space-y-1">
-        <p>👆 Tap → Speak</p>
-        <p>✋ Hold → Confirm</p>
-        <p>👆👆 Double Tap → Cancel</p>
+        <p>👆 Tap → Voice Command</p>
+        <p>✋ Hold ≥ 1s → Confirm</p>
+        <p>👈 Swipe Left → Cancel</p>
       </div> */}
 
       {/* Status */}
