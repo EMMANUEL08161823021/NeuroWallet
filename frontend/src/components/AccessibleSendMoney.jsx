@@ -109,14 +109,21 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       const accMatch = text.match(/\b\d{9,12}\b/);
       const bankMatch = text.match(/\b(Access|GTB|UBA|Zenith|First\s+Bank|FirstBank|Union|Fidelity|Ecobank|Polaris|Sterling|FCMB|Wema|Stanbic|GTBank)\b/i);
 
-      setAccountNumber(accMatch ? accMatch[0] : "");
-      setBankName(bankMatch ? bankMatch[0] : "");
+      
+      if(!accMatch || !bankMatch){
+        setStage("camera")
+      } else {
+        
+        setAccountNumber(accMatch);
+        setBankName(bankMatch);
+        setStage("amount");
+        
+      }
 
-      setStage("amount");
 
       setTimeout(() => {
         listenForAmount();
-      }, 5000);
+      }, 7000);
 
 
       setStatus(`Captured ${accMatch ? "account number" : "no account found"} ${bankMatch ? "and bank" : ""}. Asking for amount.`);
