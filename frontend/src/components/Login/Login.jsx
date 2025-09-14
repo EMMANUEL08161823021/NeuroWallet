@@ -5,7 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Mail, Fingerprint } from "lucide-react";
 import Logo from "../../../public/logo.png";
 
-const PASSKEY_BASE = `${import.meta.env.VITE_BACKEND_URL}/api/webauthn`;
+const PASSKEY_BASE = "https://neurowallet.onrender.com/api/webauthn";
 
 export default function Login() {
   const [tab, setTab] = useState("login");
