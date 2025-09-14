@@ -610,7 +610,7 @@ const LandingPage = () => {
               <UserPlus className="h-10 w-10 text-blue-900 mb-3" />
               <h2 className="text-xl font-semibold text-gray-900">Sign Up</h2>
               <p className="mt-2 text-gray-600 text-sm">
-                Create your account with just an email address. No complex forms or unnecessary barriers.
+                Sign up with your email and choose between biometrics or a magic link — quick, simple, and hassle-free.
               </p>
             </motion.div>
 
@@ -627,8 +627,7 @@ const LandingPage = () => {
               <Fingerprint className="h-10 w-10 text-blue-900 mb-3" />
               <h2 className="text-xl font-semibold text-gray-900">Choose Your Login</h2>
               <p className="mt-2 text-gray-600 text-sm">
-                Set up biometric authentication, create a PIN, or use voice recognition — whatever works for you.
-              </p>
+                Begin with your email, then sign in effortlessly using biometrics, your PIN, or a magic link. </p>
             </motion.div>
 
             {/* Step 3 */}
