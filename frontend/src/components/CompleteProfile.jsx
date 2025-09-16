@@ -15,46 +15,51 @@ export default function CompleteProfile({ onSubmit }) {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setNotice(null);
+    e.preventDefault();
+    setLoading(true);
+    setNotice(null);
 
-        try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/complete-profile`, {
+    try {
+        const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/user/complete-profile`,
+        {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                // Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("access")}`, // add token if needed
             },
-            body: JSON.stringify(formData),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                setError(data); // ⚠️ this is the raw object
-            } else {
-                // success
-                console.log("Profile completed", data);
-            }
-
-        
-
-            if (data.success) {
-                setNotice({ type: "success", msg: "Profile completed! Redirecting..." });
-                // 👉 redirect to dashboard
-                setTimeout(() => {
-                window.location.href = "/dashboard";
-                }, 1500);
-            } else {
-                setNotice({ type: "error", msg: data.error || "Failed to save profile" });
-            }
-        } catch (err) {
-        setNotice({ type: "error", msg: err.message });
-        } finally {
-        setLoading(false);
+            body: JSON.stringify(form),
         }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        setNotice({
+            type: "error",
+            msg: data.message || "Profile update failed!",
+        });
+        } else if (data.success) {
+        setNotice({
+            type: "success",
+            msg: "Profile completed! Redirecting...",
+        });
+        setTimeout(() => {
+            window.location.href = "/dashboard";
+        }, 1500);
+        } else {
+        setNotice({
+            type: "error",
+            msg: data.error?.message || data.message || "Failed to save profile",
+        });
+        }
+    } catch (err) {
+        setNotice({ type: "error", msg: err.message || "Unexpected error occurred" });
+    } finally {
+        setLoading(false);
+    }
     };
+
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
