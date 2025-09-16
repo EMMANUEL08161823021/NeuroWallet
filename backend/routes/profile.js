@@ -1,9 +1,9 @@
 const express = require("express");
 const { completeProfile } = require("../controllers/profile.controller");
-const { signAccess } = require("../utils/jwt");
+const {requireAuth} = require("../middleware/auth");
 
 const router = express.Router();
 
-router.post("/complete-profile", signAccess, completeProfile);
+router.post("/complete-profile", requireAuth, completeProfile);
 
 module.exports = router;

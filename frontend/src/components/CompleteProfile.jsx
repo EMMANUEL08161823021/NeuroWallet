@@ -20,19 +20,21 @@ export default function CompleteProfile({ onSubmit }) {
     setNotice(null);
 
     try {
-        const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/user/complete-profile`,
-        {
-            method: "POST",
-            headers: {
+        const token = localStorage.getItem("access");
+
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/complete-profile`, {
+        method: "POST",
+        headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("access")}`, // add token if needed
-            },
-            body: JSON.stringify(form),
-        }
-        );
+            Authorization: `Bearer ${token}`,   // 👈 must send
+        },
+        body: JSON.stringify(form),
+        });
 
         const data = await res.json();
+
+        console.log(`Data : ${data}`);
+        
 
         if (!res.ok) {
         setNotice({

@@ -3,10 +3,12 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "dev";
 
 const signAccess = (payload, opt = {}) => {
+
+  console.log("JWT payload:", payload);
+  
   if (typeof payload !== "object" || Array.isArray(payload) || payload === null) {
     throw new Error("signAccess expects a plain object payload");
   }
-  console.log("JWT payload:", payload);
 
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "30m", ...opt });
 };
