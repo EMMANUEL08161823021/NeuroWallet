@@ -5,7 +5,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { Mail, Fingerprint } from "lucide-react";
 import Logo from "../../../public/logo.png";
 
-const PASSKEY_BASE = "https://neurowallet.onrender.com/api/webauthn";
+// import User from "../../../../backend/models/User";
+
+const PASSKEY_BASE = `${import.meta.env.VITE_BACKEND_URL}/api/webauthn`;
 
 export default function Login() {
   const [tab, setTab] = useState("login");
@@ -63,8 +65,10 @@ export default function Login() {
     }
   };
 
+
   // --- Magic link ---
   const onMagicLink = async () => {
+    
     setMagicBusy(true);
     setLoginMagicBusy(true);
     setMsg(null);

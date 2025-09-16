@@ -39,7 +39,7 @@ export default function Transactions() {
   );
 
   return (
-    <div className="p-4">
+    <div className="p-6 h-screen rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">
       <h2 className="text-2xl font-bold mb-4">Transactions</h2>
 
       {/* Search Bar */}

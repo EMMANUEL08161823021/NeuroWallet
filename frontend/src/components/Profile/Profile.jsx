@@ -1,6 +1,6 @@
 export default function Profile() {
   return (
-    <div className="p-6">
+    <div className="p-6 h-screen rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">
       <h1 className="text-2xl font-bold mb-4">Profile</h1>
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
         <p><strong>Name:</strong> John Doe</p>

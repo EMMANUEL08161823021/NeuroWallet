@@ -18,6 +18,8 @@ const { notFound, errorHandler } = require("./middleware/error");
 // Routes
 const webauthnRoutes = require("./routes/webauthn.routes");
 const pinRoutes = require("./routes/pin.routes");
+const paymentsRouter = require("./routes/payments");
+const profileRouter = require("./routes/profile");
 const accountRoutes = require("./routes/account.routes");
 const transferRoutes = require("./routes/transfer.routes");
 const magicLinkRoutes = require("./routes/magic.routes");
@@ -61,14 +63,17 @@ console.log("pinRoutes:", typeof pinRoutes);
 console.log("accountRoutes:", typeof accountRoutes);
 console.log("transferRoutes:", typeof transferRoutes);
 console.log("authRouter:", typeof authRouter);
+console.log("paymentsRouter:", typeof paymentsRouter);
 
 // --- API routes ---
 // app.use("/api/webauth", authRouter);
 app.use("/api/auth", magicLinkRoutes);
+app.use("/api/user", profileRouter);
 app.use("/api/webauthn", webauthnRoutes);
 app.use("/api/pin", pinRoutes);
 app.use("/api/accounts", accountRoutes);
 app.use("/api/transfers", transferRoutes);
+app.use("/api/payments", paymentsRouter);
 // app.use("/api/transfers", transferRoutes);
 
 // celebrate validation errors → your error handler

@@ -90,9 +90,45 @@ router.post("/verify-registration", async (req, res) => {
       // Mark user as passkey-enabled
       user.hasPasskey = true;
       user.currentChallenge = undefined; // clear challenge
+
+      // 🔗 Create Paystack Dedicated Virtual Account if not already assigned
+      if (!user.dva || !user.dva.accountNumber) {
+        try {
+          const axios = require("axios");
+
+          const paystackRes = await axios.post(
+            "https://api.paystack.co/dedicated_account",
+            {
+              customer: user._id.toString(), // link to user in Paystack
+              preferred_bank: "providus-bank", // or "wema-bank", "titan-bank"
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+              },
+            }
+          );
+
+          const { account_number, bank } = paystackRes.data.data;
+
+          user.dva = {
+            accountNumber: account_number,
+            bankName: bank.name,
+          };
+
+          console.log("✅ Paystack DVA created:", user.dva);
+        } catch (err) {
+          console.error("❌ Paystack DVA creation failed:", err.response?.data || err.message);
+        }
+      }
+
       await user.save();
 
-      return res.json({ success: true, credentialID });
+      return res.json({
+        success: true,
+        credentialID,
+        dva: user.dva, // return DVA details to frontend
+      });
     } else {
       return res.status(400).json({ error: "Registration verification failed" });
     }
@@ -101,6 +137,7 @@ router.post("/verify-registration", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 

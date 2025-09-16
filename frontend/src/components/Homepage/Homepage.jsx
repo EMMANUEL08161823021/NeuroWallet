@@ -188,7 +188,7 @@ const Homepage = () => {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 min-h-screen">
-      <div className="p-6 rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">
+      <div className="p-6 rounded-lg h-screen shadow-md max-w-lg mx-auto border-2 border-black">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">Welcome Back</h2>
           <h2 className="text-xl font-bold text-green-600">$2,000.00</h2>

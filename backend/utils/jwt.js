@@ -1,6 +1,16 @@
-import jwt from "jsonwebtoken";
+// utils/jwt.js
+const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "dev";
 
-export const signAccess = (payload, opt={}) =>
-  jwt.sign(payload, JWT_SECRET, { expiresIn: "30m", ...opt });
-export const verifyToken = (t) => jwt.verify(t, JWT_SECRET);
+const signAccess = (payload, opt = {}) => {
+  if (typeof payload !== "object" || Array.isArray(payload) || payload === null) {
+    throw new Error("signAccess expects a plain object payload");
+  }
+  console.log("JWT payload:", payload);
+
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30m", ...opt });
+};
+
+const verifyToken = (t) => jwt.verify(t, JWT_SECRET);
+
+module.exports = { signAccess, verifyToken };

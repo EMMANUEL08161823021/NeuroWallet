@@ -31,7 +31,7 @@ async function requestMagicLink(req, res, next) {
     });
 
     if (user) {
-      const url = new URL("https://neurowallet.onrender.com/api/auth/magic/verify"); // ✅ fixed route
+      const url = new URL(`${process.env.APP_URL}/api/auth/magic/verify`); // ✅ fixed route
       url.searchParams.set("token", rawToken);
       if (clientNonce) url.searchParams.set("nonce", clientNonce);
       url.searchParams.set("redirect", "/dashboard");
@@ -63,7 +63,6 @@ async function verifyMagicLink(req, res, next) {
     const match = await MagicLink.findOne({ used: false });
     if (!match) return res.status(400).send("Invalid or used link");
 
-    // 🔑 Compare hashes, don’t look up raw token directly
     const valid = await bcrypt.compare(token, match.tokenHash);
     if (!valid) return res.status(400).send("Invalid or used link");
 
@@ -71,28 +70,37 @@ async function verifyMagicLink(req, res, next) {
     if (match.clientNonce && match.clientNonce !== nonce)
       return res.status(400).send("Link not valid on this device");
 
-    const user = await User.findOne({ email: match.email });
+    let user = await User.findOne({ email: match.email });
     if (!user) return res.status(400).send("Invalid link");
 
-    // mark link as used
+    // ✅ Mark link as used
     match.used = true;
     await match.save();
 
+    // ✅ Issue JWT
     const tokenJwt = signAccess({
       sub: user.id,
       email: user.email,
       recentAuthAt: new Date(),
     });
 
-    // redirect back to SPA with token
+    // 🔎 Check if user has Paystack profile
+    let nextPath = redirect;
+    if (!user.paystackCustomerId || !user.virtualAccount) {
+      nextPath = "/complete-profile"; // 👈 Force them to fill profile first
+    }
+
+    // ✅ Redirect back to frontend
     res.redirect(
-      `https://neuro-wallet.vercel.app/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(
-        redirect
+      `http://neuro-wallet.vercel.app/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(
+        nextPath
       )}`
     );
   } catch (e) {
     next(e);
   }
 }
+
+
 
 module.exports = { requestMagicLink, verifyMagicLink };

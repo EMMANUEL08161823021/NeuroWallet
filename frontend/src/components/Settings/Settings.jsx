@@ -1,6 +1,6 @@
 export default function Settings() {
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 h-screen rounded-lg shadow-md max-w-lg mx-auto border-2 border-black space-y-4">
       <h1 className="text-2xl font-bold">Settings</h1>
 
       {/* Accessibility Section */}

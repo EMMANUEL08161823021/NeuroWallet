@@ -275,7 +275,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto bg-white dark:bg-gray-900 dark:text-gray-100">
+    <div className="p-6 h-screen rounded-lg shadow-md max-w-lg border-2 border-black mx-auto bg-white dark:bg-gray-900 dark:text-gray-100">
       <h2 className="text-2xl font-bold mb-4">Send Money (Accessible)</h2>
 
       {/* live region for screen readers */}
