@@ -152,12 +152,17 @@ router.post("/generate-authentication-options", async (req, res) => {
 
     const options = await generateAuthenticationOptions({
       timeout: 60000,
-      userVerification: "required", // 👈 ensures fingerprint/FaceID
+      userVerification: "required",   // force biometric verification
       allowCredentials,
-      rpID: "localhost",            // 👈 match frontend domain
+      rpID: "neuro-wallet.vercel.app",
+      authenticatorSelection: {
+        authenticatorAttachment: "platform", // ✅ ensures built-in biometric is used
+      },
     });
 
     user.currentChallenge = options.challenge;
+
+    
     await user.save();
 
     res.json(options);
