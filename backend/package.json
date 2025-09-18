@@ -31,7 +31,7 @@
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.1",
     "morgan": "^1.10.1",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.5",
     "nodemailer-sendgrid-transport": "^0.2.0",
     "stripe": "^18.1.0"

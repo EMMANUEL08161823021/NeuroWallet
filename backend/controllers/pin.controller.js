@@ -2,7 +2,7 @@
 
 // controllers/pin.controller.js
 const { Segments, Joi } = require("celebrate");
-const User = require("../models/User");
+const User = require("../models/NewUser");
 const { signAccess } = require("../utils/jwt");
 
 // POST /api/pin/set  (requireAuth)

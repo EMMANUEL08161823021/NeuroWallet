@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require("mongoose");
-const User = require('../models/User');
+const User = require('../models/NewUser');
 const Credential = require('../models/Credential');
-const { isoUint8Array } = require("@simplewebauthn/server/helpers");
 
 const {
   generateRegistrationOptions,
@@ -15,11 +13,6 @@ const {
 const base64url = require('base64url');
 
 
-
-// Generate Registration Options
-// const rpID = "localhost";
-// const origin = "http://localhost:5173";
-
 // -------------------- Generate Registration Options --------------------
 router.post("/generate-registration-options", async (req, res) => {
   try {
@@ -29,7 +22,7 @@ router.post("/generate-registration-options", async (req, res) => {
 
     const options = await generateRegistrationOptions({
       rpName: "NeuroWallet",
-      rpID: "neuro-wallet.vercel.app",
+      rpID: "localhost",
       userName: user.email,
       userID: Buffer.from(user._id.toString()), // unique ID for WebAuthn
     });
@@ -46,9 +39,10 @@ router.post("/generate-registration-options", async (req, res) => {
 
 
 // -------------------- Verify Registration --------------------
+
 router.post("/verify-registration", async (req, res) => {
   try {
-    const { email, attestationResponse } = req.body;
+    const { email, attestationResponse, redirect = "/dashboard" } = req.body;
 
     if (!email || !attestationResponse) {
       return res.status(400).json({ error: "Missing email or attestation response" });
@@ -59,8 +53,8 @@ router.post("/verify-registration", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const expectedOrigin = "https://neuro-wallet.vercel.app";
-    const expectedRPID = "neuro-wallet.vercel.app";
+    const expectedOrigin = "http://localhost:5173";
+    const expectedRPID = "localhost";
 
     const verification = await verifyRegistrationResponse({
       response: attestationResponse,
@@ -74,12 +68,12 @@ router.post("/verify-registration", async (req, res) => {
     if (verification.verified && verification.registrationInfo) {
       const { credential } = verification.registrationInfo;
 
-      // Extract fields
-      const credentialID = credential.id; // already base64url string
+      // Normalize credentialID
+      const credentialID = base64url.encode(credential.id);
       const credentialPublicKey = Buffer.from(credential.publicKey).toString("base64");
       const counter = credential.counter || 0;
 
-      // Save credential
+      // Save credential (separate collection)
       await Credential.create({
         userId: user._id,
         credentialID,
@@ -91,43 +85,13 @@ router.post("/verify-registration", async (req, res) => {
       user.hasPasskey = true;
       user.currentChallenge = undefined; // clear challenge
 
-      // 🔗 Create Paystack Dedicated Virtual Account if not already assigned
-      if (!user.dva || !user.dva.accountNumber) {
-        try {
-          const axios = require("axios");
-
-          const paystackRes = await axios.post(
-            "https://api.paystack.co/dedicated_account",
-            {
-              customer: user._id.toString(), // link to user in Paystack
-              preferred_bank: "providus-bank", // or "wema-bank", "titan-bank"
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-              },
-            }
-          );
-
-          const { account_number, bank } = paystackRes.data.data;
-
-          user.dva = {
-            accountNumber: account_number,
-            bankName: bank.name,
-          };
-
-          console.log("✅ Paystack DVA created:", user.dva);
-        } catch (err) {
-          console.error("❌ Paystack DVA creation failed:", err.response?.data || err.message);
-        }
-      }
+      // Decide next path based on profile completeness
 
       await user.save();
 
       return res.json({
         success: true,
         credentialID,
-        dva: user.dva, // return DVA details to frontend
       });
     } else {
       return res.status(400).json({ error: "Registration verification failed" });
@@ -137,8 +101,6 @@ router.post("/verify-registration", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
 
 
 
@@ -181,8 +143,6 @@ router.post("/generate-authentication-options", async (req, res) => {
 });
 
 
-
-
 /**
  * Verify Authentication
  */
@@ -204,8 +164,8 @@ router.post("/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
-      expectedOrigin: "https://neuro-wallet.vercel.app",
-      expectedRPID: "neuro-wallet.vercel.app",
+      expectedOrigin: "http://localhost:5173",
+      expectedRPID: "localhost",
       credential: {
         id: matchingCred.credentialID,
         publicKey: Buffer.from(matchingCred.credentialPublicKey, "base64"),
@@ -224,7 +184,17 @@ router.post("/verify-authentication", async (req, res) => {
       user.currentChallenge = undefined;
       await user.save();
 
-      return res.json({ success: true, verified: true });
+
+      let nextPath = redirect;
+      if (!user.name || !user.phone) {
+        nextPath = "/complete-profile";
+      }
+
+      return res.json({
+        success: true,
+        nextPath,
+      });
+
     } else {
       return res.status(400).json({ success: false, verified: false });
     }

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://neurowallet.onrender.com",
+  baseURL: "http://localhost:9000",
   // "https://neurowallet.onrender.com",
   withCredentials: true,
 });

@@ -7,7 +7,7 @@ import Logo from "../../../public/logo.png";
 
 // import User from "../../../../backend/models/User";
 
-const PASSKEY_BASE = `${import.meta.env.VITE_BACKEND_URL}/api/webauthn`;
+const PASSKEY_BASE = "http://localhost:9000/api/webauthn";
 
 export default function Login() {
   const [tab, setTab] = useState("login");
@@ -84,18 +84,52 @@ export default function Login() {
   };
 
   // --- Passkey register ---
+// --- Passkey register ---
   const onPasskeyRegister = async () => {
-    setPasskeyBusy(true);
+    setBusy(true);
     setMsg(null);
     try {
-      // ... your existing passkey logic ...
-      setNotice("ok", "✅ Passkey registered successfully!");
+      // Step 1: Get registration options
+      const optionsRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-registration-options`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!optionsRes.ok) throw new Error("Failed to fetch registration options");
+
+      const options = await optionsRes.json();
+
+      // Step 2: Prepare options and request credential
+      const publicKey = prepPublicKeyOptions(options);
+      const credential = await navigator.credentials.create({ publicKey });
+      if (!credential) throw new Error("No credential created");
+
+      const attestationResponse = attestationToJSON(credential);
+
+      // Step 3: Verify registration with server
+      const verifyRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-registration`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, attestationResponse }),
+      });
+
+      const result = await verifyRes.json();
+
+      if (result.success) {
+        setNotice("ok", "✅ Passkey registered successfully!");
+        setTab("login");
+      } else {
+        setNotice("err", "❌ Passkey registration failed. Please try again.");
+      }
     } catch (err) {
-      setNotice("err", "❌ Passkey registration failed");
+      console.error("Passkey registration error:", err);
+      setNotice("err", "⚠️ Something went wrong during registration.");
     } finally {
-      setPasskeyBusy(false);
+      setBusy(false);
     }
   };
+
 
   // --- Passkey Login ---
   const onPasskeyLogin = async () => {

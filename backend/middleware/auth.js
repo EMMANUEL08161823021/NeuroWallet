@@ -1,16 +1,27 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "dev";
+const User = require("../models/NewUser");
 
-function requireAuth(req, res, next) {
-  const h = req.headers.authorization || "";
-  const token = h.startsWith("Bearer ") ? h.slice(7) : null;
-  if (!token) return res.status(401).json({ error: "Unauthorized" });
+exports.requireAuth = async (req, res, next) => {
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ error: "Invalid/expired token" });
-  }
-}
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-module.exports = { requireAuth };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Try to find user by sub (Mongo _id) or fallback to email
+    let user = await User.findById(decoded.sub);
+    if (!user && decoded.email) {
+      user = await User.findOne({ email: decoded.email });
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    req.user = { sub: decoded.sub, email: decoded.email }; // attach minimal user info
+    next();
+  } catch (err) {
+    console.error("❌ Auth error:", err.message);
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};

@@ -1,6 +1,6 @@
 // controllers/payments.controller.js
 const crypto = require("crypto");
-const User = require("../models/User");
+const User = require("../models/NewUser");
 
 const handlePaystackWebhook = async (req, res) => {
   try {

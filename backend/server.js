@@ -23,6 +23,8 @@ const profileRouter = require("./routes/profile");
 const accountRoutes = require("./routes/account.routes");
 const transferRoutes = require("./routes/transfer.routes");
 const magicLinkRoutes = require("./routes/magic.routes");
+const walletRoutes = require("./routes/wallet");
+
 // const authRouter = require("./routes/auth"); // your existing auth router
 
 const app = express();
@@ -33,7 +35,7 @@ app.use(helmet());
 app.use(
   cors({
     // Must be ORIGIN only (no path)
-    origin: ["http://localhost:5173", "https://neuro-wallet.vercel.app"],
+    origin: ["http://localhost:5173", "https://neuro-wallet.vercel.app",],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "X-Requested-With"],
@@ -61,19 +63,23 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 console.log("webauthnRoutes:", typeof webauthnRoutes);
 console.log("pinRoutes:", typeof pinRoutes);
 console.log("accountRoutes:", typeof accountRoutes);
+console.log("profileRouter:", typeof profileRouter);
 console.log("transferRoutes:", typeof transferRoutes);
 console.log("authRouter:", typeof authRouter);
 console.log("paymentsRouter:", typeof paymentsRouter);
 
+
 // --- API routes ---
 // app.use("/api/webauth", authRouter);
+app.use("/api/webauthn", webauthnRoutes);
 app.use("/api/auth", magicLinkRoutes);
 app.use("/api/user", profileRouter);
-app.use("/api/webauthn", webauthnRoutes);
 app.use("/api/pin", pinRoutes);
 app.use("/api/accounts", accountRoutes);
 app.use("/api/transfers", transferRoutes);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/wallet", walletRoutes);
+
 // app.use("/api/transfers", transferRoutes);
 
 // celebrate validation errors → your error handler

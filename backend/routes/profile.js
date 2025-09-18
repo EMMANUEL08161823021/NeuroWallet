@@ -1,9 +1,11 @@
 const express = require("express");
-const { completeProfile } = require("../controllers/profile.controller");
-const {requireAuth} = require("../middleware/auth");
-
 const router = express.Router();
+const profileController = require("../controllers/profile.controller");
+const { requireAuth } = require("../middleware/auth");
 
-router.post("/complete-profile", requireAuth, completeProfile);
+
+// inside routes/profile.js
+router.post("/complete-profile", requireAuth, profileController.completeProfile);
+
 
 module.exports = router;

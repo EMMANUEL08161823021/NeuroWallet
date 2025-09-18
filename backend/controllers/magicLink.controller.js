@@ -1,8 +1,7 @@
-// controllers/magiclink.controller.js
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const MagicLink = require("../models/MagicLink");
-const User = require("../models/User");
+const User = require("../models/NewUser");
 const { signAccess } = require("../utils/jwt");
 const { sendEmail } = require("../utils/mailer");
 
@@ -15,7 +14,6 @@ async function requestMagicLink(req, res, next) {
 
     const user = await User.findOne({ email }); // don’t reveal if missing
 
-    // generate raw token
     const rawToken = crypto.randomBytes(32).toString("base64url");
     const tokenHash = await bcrypt.hash(rawToken, 12);
     const expiresAt = new Date(Date.now() + MAGIC_TTL_MIN * 60 * 1000);
@@ -31,12 +29,12 @@ async function requestMagicLink(req, res, next) {
     });
 
     if (user) {
-      const url = new URL("https://neurowallet.onrender.com/api/auth/magic/verify"); // ✅ fixed route
+      const url = new URL("http://localhost:9000/api/auth/magic/verify");
       url.searchParams.set("token", rawToken);
       if (clientNonce) url.searchParams.set("nonce", clientNonce);
       url.searchParams.set("redirect", "/dashboard");
 
-      await sendEmail({
+      const info = await sendEmail({
         to: email,
         subject: "Your NeuroWallet sign-in link",
         html: `
@@ -46,6 +44,11 @@ async function requestMagicLink(req, res, next) {
           <p>Or copy and paste this URL:<br>${url.toString()}</p>
         `,
       });
+
+      // Dev: log preview URL
+      if (process.env.NODE_ENV !== "production") {
+        console.log("💌 Preview link:", nodemailer.getTestMessageUrl(info));
+      }
     }
 
     res.json({ ok: true, message: "If an account exists, a link was sent." });
@@ -60,47 +63,45 @@ async function verifyMagicLink(req, res, next) {
     const { token, nonce, redirect = "/dashboard" } = req.query;
     if (!token) return res.status(400).send("Missing token");
 
-    const match = await MagicLink.findOne({ used: false });
+    const candidates = await MagicLink.find({ used: false }).sort({ createdAt: -1 });
+    let match = null;
+
+    for (let link of candidates) {
+      if (await bcrypt.compare(token, link.tokenHash)) {
+        match = link;
+        break;
+      }
+    }
+
     if (!match) return res.status(400).send("Invalid or used link");
-
-    const valid = await bcrypt.compare(token, match.tokenHash);
-    if (!valid) return res.status(400).send("Invalid or used link");
-
     if (match.expiresAt < new Date()) return res.status(400).send("Link expired");
-    if (match.clientNonce && match.clientNonce !== nonce)
+    if (match.clientNonce && match.clientNonce !== nonce) {
       return res.status(400).send("Link not valid on this device");
+    }
 
-    let user = await User.findOne({ email: match.email });
+    const user = await User.findOne({ email: match.email });
     if (!user) return res.status(400).send("Invalid link");
 
-    // ✅ Mark link as used
     match.used = true;
     await match.save();
 
-    // ✅ Issue JWT
     const tokenJwt = signAccess({
-      sub: user.id,
+      sub: user._id,
       email: user.email,
       recentAuthAt: new Date(),
     });
 
-    // 🔎 Check if user has Paystack profile
     let nextPath = redirect;
-    if (!user.paystackCustomerId || !user.virtualAccount) {
-      nextPath = "/complete-profile"; // 👈 Force them to fill profile first
+    if (!user.name || !user.phone) {
+      nextPath = "/complete-profile";
     }
 
-    // ✅ Redirect back to frontend
     res.redirect(
-      `http://neuro-wallet.vercel.app/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(
-        nextPath
-      )}`
+      `http://localhost:5173/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(nextPath)}`
     );
   } catch (e) {
     next(e);
   }
 }
-
-
 
 module.exports = { requestMagicLink, verifyMagicLink };

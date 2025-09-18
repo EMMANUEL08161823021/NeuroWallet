@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
+import FundWallet from "../../pages/FundWallet";
+import Transfer from "../../pages/Transfer";
+import axios from "axios";
+
+
+
 
 // GestureButton component to handle tap, double tap, and swipe
 const GestureButton = ({ onTap, onDoubleTap, onSwipe }) => {
@@ -54,11 +60,28 @@ const Homepage = () => {
 
   const beneficiaries = [
     { name: "Emmanuel", provider: "Palmpay", account: "7082659880" },
-    { name: "Heuro", provider: "Opay", account: "1234567890" },
-    { name: "Richard", provider: "Kuda", account: "2233445566" },
-    { name: "Emeka", provider: "Palmpay", account: "9988776655" },
 
   ];
+
+
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+
+  useEffect(() => {
+      const fetchWallet = async () => {
+      try {
+          const token = localStorage.getItem("token");
+          const res = await axios.get("http://localhost:9000/api/wallet/me", {
+          headers: { Authorization: `Bearer ${token}` }
+          });
+          setBalance(res.data.balance);
+          setTransactions(res.data.transactions);
+      } catch (err) {
+          console.error(err);
+      }
+      };
+      fetchWallet();
+  }, []);
 
   const filteredBeneficiaries = beneficiaries.filter((b) =>
     `${b.name} ${b.provider}`.toLowerCase().includes(query.trim().toLowerCase())
@@ -189,10 +212,23 @@ const Homepage = () => {
   return (
     <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 min-h-screen">
       <div className="p-6 rounded-lg h-screen shadow-md max-w-lg mx-auto border-2 border-black">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">Welcome Back</h2>
-          <h2 className="text-xl font-bold text-green-600">$2,000.00</h2>
-        </div>
+        <h2>Dashboard</h2>
+        <h3>Wallet Balance: ₦{balance}</h3>
+
+        <FundWallet/>
+        <Transfer/>
+
+        <h4>Transactions</h4>
+        <ul>
+          {transactions.map((t, i) => (
+          <li key={i}>
+              [{t.type.toUpperCase()}] ₦{t.amount} 
+              {t.to && <> → {t.to}</>} 
+              {t.from && <> ← {t.from}</>} 
+              ({new Date(t.createdAt).toLocaleString()})
+          </li>
+          ))}
+        </ul>
 
         <h3 className="text-lg font-semibold mb-2">Beneficiaries</h3>
         <input
