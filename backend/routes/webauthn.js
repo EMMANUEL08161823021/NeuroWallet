@@ -78,7 +78,7 @@ router.post("/verify-registration", async (req, res) => {
     }
 
     const expectedOrigin = "https://neuro-wallet.vercel.app";
-    const expectedRPID = "neuro-wallet.vercel.app/";
+    const expectedRPID = "neuro-wallet.vercel.app";
 
     const verification = await verifyRegistrationResponse({
       response: attestationResponse,
