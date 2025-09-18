@@ -38,10 +38,17 @@ router.post("/generate-registration-options", async (req, res) => {
 
     const options = await generateRegistrationOptions({
       rpName: "NeuroWallet",
-      rpID: "localhost", // domain (must match your origin in dev: "localhost")
+      rpID: "neuro-wallet.vercel.app",
       userName: user.email,
-      userID: Buffer.from(user._id.toString()), // unique ID for WebAuthn
+      userID: Buffer.from(user._id.toString()),
+
+      authenticatorSelection: {
+        authenticatorAttachment: "platform", // ✅ built-in fingerprint/FaceID
+        residentKey: "preferred",
+        userVerification: "required",
+      },
     });
+
 
     user.currentChallenge = options.challenge; // store challenge
     await user.save();
@@ -70,8 +77,8 @@ router.post("/verify-registration", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const expectedOrigin = "http://localhost:5173";
-    const expectedRPID = "localhost";
+    const expectedOrigin = "https://neuro-wallet.vercel.app";
+    const expectedRPID = "neuro-wallet.vercel.app/";
 
     const verification = await verifyRegistrationResponse({
       response: attestationResponse,
@@ -145,8 +152,9 @@ router.post("/generate-authentication-options", async (req, res) => {
 
     const options = await generateAuthenticationOptions({
       timeout: 60000,
-      userVerification: "preferred",
+      userVerification: "required", // 👈 ensures fingerprint/FaceID
       allowCredentials,
+      rpID: "localhost",            // 👈 match frontend domain
     });
 
     user.currentChallenge = options.challenge;
@@ -181,8 +189,8 @@ router.post("/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
-      expectedOrigin: "http://localhost:5173",
-      expectedRPID: "localhost",
+      expectedOrigin: "https://neuro-wallet.vercel.app",
+      expectedRPID: "neuro-wallet.vercel.app/",
       credential: {
         id: matchingCred.credentialID,
         publicKey: Buffer.from(matchingCred.credentialPublicKey, "base64"),

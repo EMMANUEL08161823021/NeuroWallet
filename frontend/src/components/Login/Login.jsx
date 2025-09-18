@@ -138,7 +138,7 @@ export default function Login() {
     setMsg(null);
     try {
       const { data: options } = await api.post(
-        `${PASSKEY_BASE}/generate-authentication-options`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
         { email }
       );
       const publicKey = prepPublicKeyOptions(options);
@@ -146,7 +146,7 @@ export default function Login() {
       const auth = assertionToJSON(assertion);
 
       const { data: verify } = await api.post(
-        `${PASSKEY_BASE}/verify-authentication`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
         {
           email,
           assertionResponse: auth,
