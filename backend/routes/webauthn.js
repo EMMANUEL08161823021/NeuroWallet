@@ -12,17 +12,33 @@ const {
 
 const base64url = require('base64url');
 
+router.get("/test", (req, res) => {
+  res.json({ message: "✅ WebAuthn router is mounted" });
+});
+
 
 // -------------------- Generate Registration Options --------------------
 router.post("/generate-registration-options", async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Look for user, or create if not found
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({
+        email,
+        hasPasskey: false,
+      });
+      await user.save();
+    }
 
     const options = await generateRegistrationOptions({
       rpName: "NeuroWallet",
-      rpID: "localhost",
+      rpID: "localhost", // domain (must match your origin in dev: "localhost")
       userName: user.email,
       userID: Buffer.from(user._id.toString()), // unique ID for WebAuthn
     });
@@ -36,6 +52,7 @@ router.post("/generate-registration-options", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 // -------------------- Verify Registration --------------------

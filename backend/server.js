@@ -16,7 +16,7 @@ const { errors: celebrateErrors } = require("celebrate");
 const { notFound, errorHandler } = require("./middleware/error");
 
 // Routes
-const webauthnRoutes = require("./routes/webauthn.routes");
+const webauthnRoutes = require("./routes/webauthn");
 const pinRoutes = require("./routes/pin.routes");
 const paymentsRouter = require("./routes/payments");
 const profileRouter = require("./routes/profile");
