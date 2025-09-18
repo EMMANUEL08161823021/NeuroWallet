@@ -137,36 +137,57 @@ export default function Login() {
     setLoginPasskeyBusy(true);
     setMsg(null);
     try {
-      const { data: options } = await api.post(
+      // Step 1: Get authentication options
+      const optionsRes = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
-        { email }
-      );
-      const publicKey = prepPublicKeyOptions(options);
-      const assertion = await navigator.credentials.get({ publicKey });
-      const auth = assertionToJSON(assertion);
-
-      const { data: verify } = await api.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
         {
-          email,
-          assertionResponse: auth,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
         }
       );
 
+      if (!optionsRes.ok) throw new Error("Failed to fetch authentication options");
+      const options = await optionsRes.json();
+
+      const publicKey = prepPublicKeyOptions(options);
+      const assertion = await navigator.credentials.get({ publicKey });
+      if (!assertion) throw new Error("No assertion generated");
+
+      const auth = assertionToJSON(assertion);
+
+      // Step 2: Verify authentication
+      const verifyRes = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            assertionResponse: auth,
+          }),
+        }
+      );
+
+      if (!verifyRes.ok) throw new Error("Failed to verify authentication");
+      const verify = await verifyRes.json();
+
+      // Step 3: Handle result
       if (verify?.verified) {
-        setNotice("ok", "Passkey verified");
+        setNotice("ok", "✅ Passkey verified");
         navigate("/dashboard");
       } else {
-        setNotice("err", "Passkey authentication failed");
+        setNotice("err", "❌ Passkey authentication failed");
       }
     } catch (e) {
       console.error("Passkey login error:", e);
-      setNotice("err", "Passkey authentication failed");
+      setNotice("err", "⚠️ Passkey authentication failed");
     } finally {
       setBusy(false);
-      setLoginPasskeyBusy(true);
+      setLoginPasskeyBusy(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 px-4">
