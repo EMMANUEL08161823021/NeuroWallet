@@ -132,61 +132,86 @@ export default function Login() {
 
 
   // --- Passkey Login ---
-  const onPasskeyLogin = async () => {
-    setBusy(true);
-    setLoginPasskeyBusy(true);
-    setMsg(null);
-    try {
-      // Step 1: Get authentication options
-      const optionsRes = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        }
-      );
+const onPasskeyLogin = async () => {
+  setBusy(true);
+  setLoginPasskeyBusy(true);
+  setMsg(null);
 
-      if (!optionsRes.ok) throw new Error("Failed to fetch authentication options");
-      const options = await optionsRes.json();
-
-      const publicKey = prepPublicKeyOptions(options);
-      const assertion = await navigator.credentials.get({ publicKey });
-      if (!assertion) throw new Error("No assertion generated");
-
-      const auth = assertionToJSON(assertion);
-
-      // Step 2: Verify authentication
-      const verifyRes = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            assertionResponse: auth,
-          }),
-        }
-      );
-
-      if (!verifyRes.ok) throw new Error("Failed to verify authentication");
-      const verify = await verifyRes.json();
-
-      // Step 3: Handle result
-      if (verify?.verified) {
-        setNotice("ok", "✅ Passkey verified");
-        navigate("/dashboard");
-      } else {
-        setNotice("err", "❌ Passkey authentication failed");
+  try {
+    // Step 1: Get authentication options from backend
+    const optionsRes = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       }
-    } catch (e) {
-      console.error("Passkey login error:", e);
-      setNotice("err", "⚠️ Passkey authentication failed");
-    } finally {
-      setBusy(false);
-      setLoginPasskeyBusy(false);
+    );
+
+
+    if (!optionsRes.ok) throw new Error("Failed to fetch authentication options");
+    const options = await optionsRes.json();
+
+    console.log("Origin:", window.location.origin);
+
+
+
+    console.log("options:", options);
+    
+
+    // Step 2: Prepare options for navigator.credentials
+  console.log("allowCredentials before prepPublicKeyOptions:", options.allowCredentials);
+  const publicKey = prepPublicKeyOptions(options);
+  console.log("allowCredentials after prepPublicKeyOptions:", publicKey.allowCredentials);
+
+  console.log("publickey", publicKey);
+
+    let assertion;
+    try {
+      assertion = await navigator.credentials.get({ publicKey });
+      console.log("Assertion:", assertion);
+    } catch (err) {
+      console.error("navigator.credentials.get failed:", err);
     }
-  };
+
+    
+    if (!assertion) throw new Error("No assertion generated");
+
+    const auth = assertionToJSON(assertion);
+
+    console.log("auth:", auth);
+    
+
+    // Step 4: Verify authentication with backend
+    const verifyRes = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, assertionResponse: auth }),
+      }
+    );
+
+    if (!verifyRes.ok) throw new Error("Failed to verify authentication");
+    const verify = await verifyRes.json();
+
+    // Step 5: Redirect based on backend result
+    if (verify?.verified) {
+      setNotice("ok", "✅ Passkey verified");
+      navigate(verify.nextPath || "/dashboard"); // Use nextPath returned by backend
+    } else {
+      setNotice("err", "❌ Passkey authentication failed");
+    }
+
+  } catch (e) {
+    console.error("Passkey login error:", e);
+    setNotice("err", "⚠️ Passkey authentication failed");
+  } finally {
+    setBusy(false);
+    setLoginPasskeyBusy(false);
+  }
+};
+
 
 
   return (

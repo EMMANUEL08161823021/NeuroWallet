@@ -21,20 +21,13 @@ export function prepPublicKeyOptions(opts) {
   if (out.challenge) out.challenge = b64UrlToBuf(out.challenge);
 
   if (out.user && out.user.id) {
-    out.user = { ...out.user, id: b64UrlToBuf(out.user.id) };
-  }
-
-  if (Array.isArray(out.excludeCredentials)) {
-    out.excludeCredentials = out.excludeCredentials.map((c) => ({
-      ...c,
-      id: b64UrlToBuf(c.id),
-    }));
+    out.user.id = b64UrlToBuf(out.user.id);
   }
 
   if (Array.isArray(out.allowCredentials)) {
     out.allowCredentials = out.allowCredentials.map((c) => ({
       ...c,
-      id: b64UrlToBuf(c.id),
+      id: b64UrlToBuf(c.id), // must convert from base64url to ArrayBuffer
     }));
   }
 

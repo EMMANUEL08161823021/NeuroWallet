@@ -46,7 +46,7 @@ router.post("/generate-registration-options", async (req, res) => {
       rpID,
       userName: user.email,
       userID: Buffer.from(user._id.toString()),
-
+      attestationType: "none",
       authenticatorSelection: {
         authenticatorAttachment: "platform", // ✅ built-in biometrics
         residentKey: "preferred",
@@ -97,6 +97,12 @@ router.post("/verify-registration", async (req, res) => {
         counter: credential.counter || 0,
       });
 
+      console.log("✅ Registration stored in DB:", {
+        credentialID,
+        credentialIDLength: credential.id.length,
+        credentialPublicKeyLength: credentialPublicKey.length,
+      });
+
       user.hasPasskey = true;
       user.currentChallenge = undefined;
       await user.save();
@@ -111,7 +117,6 @@ router.post("/verify-registration", async (req, res) => {
   }
 });
 
-// -------------------- Authentication --------------------
 router.post("/generate-authentication-options", async (req, res) => {
   try {
     const { email } = req.body;
@@ -123,15 +128,26 @@ router.post("/generate-authentication-options", async (req, res) => {
     const creds = await Credential.find({ userId: user._id });
 
     const allowCredentials = creds.map((cred) => ({
-      id: cred.credentialID,
+      id: cred.credentialID, // already base64url
       type: "public-key",
       transports: cred.transports?.length > 0 ? cred.transports : ["internal"],
     }));
 
     const options = await generateAuthenticationOptions({
+      rpID: "localhost",
       timeout: 60000,
-      userVerification: "required", // ✅ force biometrics
+      userVerification: "required",
       allowCredentials,
+    });
+
+    console.log("options:", options);
+    
+
+    console.log("✅ Authentication options generated:");
+    console.log({
+      challenge: options.challenge,
+      rpID: options.rpId,
+      allowCredentials: allowCredentials,
     });
 
     user.currentChallenge = options.challenge;
@@ -144,10 +160,12 @@ router.post("/generate-authentication-options", async (req, res) => {
   }
 });
 
+
+// -------------------- Verify Authentication --------------------
 // -------------------- Verify Authentication --------------------
 router.post("/verify-authentication", async (req, res) => {
   try {
-    const { email, assertionResponse } = req.body;
+    const { email, assertionResponse, redirect = "/dashboard" } = req.body;
     if (!email || !assertionResponse) {
       return res.status(400).json({ error: "Missing email or assertion response" });
     }
@@ -156,13 +174,20 @@ router.post("/verify-authentication", async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const creds = await Credential.find({ userId: user._id });
-    if (!creds || creds.length === 0) {
-      return res.status(404).json({ error: "No credentials found" });
-    }
-
-    const { origin, rpID } = getRpConfig(req);
+    if (!creds?.length) return res.status(404).json({ error: "No credentials found" });
 
     const dbAuthenticator = creds[0]; // pick first for demo
+    const { origin, rpID } = getRpConfig(req);
+
+    console.log("Auth debug:", {
+      email,
+      userId: user._id.toString(),
+      dbCredentialID: dbAuthenticator.credentialID,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      currentChallenge: user.currentChallenge,
+    });
+
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
@@ -175,21 +200,30 @@ router.post("/verify-authentication", async (req, res) => {
       },
     });
 
-    if (verification.verified) {
-      dbAuthenticator.counter = verification.authenticationInfo.newCounter;
-      await dbAuthenticator.save();
+    console.log("Verification result:", verification);
 
-      user.currentChallenge = undefined;
-      await user.save();
-
-      return res.json({ verified: true });
+    if (!verification.verified) {
+      return res.status(400).json({ verified: false, error: "Authentication failed" });
     }
 
-    res.status(400).json({ verified: false, error: "Authentication failed" });
+    if (verification.authenticationInfo?.newCounter !== undefined) {
+      dbAuthenticator.counter = verification.authenticationInfo.newCounter;
+      await dbAuthenticator.save();
+    }
+
+    user.currentChallenge = undefined;
+    await user.save();
+
+    let nextPath = redirect;
+    if (!user.name || !user.phone) nextPath = "/complete-profile";
+
+    res.json({ verified: true, nextPath });
   } catch (err) {
     console.error("❌ Error in /verify-authentication:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 module.exports = router;
