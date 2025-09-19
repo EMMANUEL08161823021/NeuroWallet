@@ -1,133 +1,117 @@
-const express = require('express');
-const router = express.Router();
-const User = require('../models/NewUser');
-const Credential = require('../models/Credential');
-
+const express = require("express");
+const base64url = require("base64url");
 const {
   generateRegistrationOptions,
-  verifyRegistrationResponse,
   generateAuthenticationOptions,
+  verifyRegistrationResponse,
   verifyAuthenticationResponse,
 } = require("@simplewebauthn/server");
 
-const base64url = require('base64url');
+const User = require("../models/NewUser");
+const Credential = require("../models/Credential");
 
-router.get("/test", (req, res) => {
-  res.json({ message: "✅ WebAuthn router is mounted" });
-});
+const router = express.Router();
 
+// Utility: auto-detect RP settings
+const getRpConfig = (req) => {
+  let origin, rpID;
 
-// -------------------- Generate Registration Options --------------------
+  if (process.env.NODE_ENV === "production") {
+    origin = "https://neuro-wallet.vercel.app";
+    rpID = "neuro-wallet.vercel.app";
+  } else {
+    origin = "http://localhost:5173"; // frontend dev server
+    rpID = "localhost";
+  }
+
+  return { origin, rpID };
+};
+
+// -------------------- Registration --------------------
 router.post("/generate-registration-options", async (req, res) => {
   try {
     const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
 
-    if (!email) {
-      return res.status(400).json({ error: "Email is required" });
-    }
-
-    // Look for user, or create if not found
     let user = await User.findOne({ email });
     if (!user) {
-      user = new User({
-        email,
-        hasPasskey: false,
-      });
+      user = new User({ email, hasPasskey: false });
       await user.save();
     }
 
+    const { rpID } = getRpConfig(req);
+
     const options = await generateRegistrationOptions({
       rpName: "NeuroWallet",
-      rpID: "neuro-wallet.vercel.app",
+      rpID,
       userName: user.email,
       userID: Buffer.from(user._id.toString()),
 
       authenticatorSelection: {
-        authenticatorAttachment: "platform", // ✅ built-in fingerprint/FaceID
+        authenticatorAttachment: "platform", // ✅ built-in biometrics
         residentKey: "preferred",
         userVerification: "required",
       },
     });
 
-
-    user.currentChallenge = options.challenge; // store challenge
+    user.currentChallenge = options.challenge;
     await user.save();
 
     res.json(options);
   } catch (err) {
-    console.error("Error in /generate-registration-options:", err);
+    console.error("❌ Error in /generate-registration-options:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-
 // -------------------- Verify Registration --------------------
-
 router.post("/verify-registration", async (req, res) => {
   try {
-    const { email, attestationResponse, redirect = "/dashboard" } = req.body;
-
+    const { email, attestationResponse } = req.body;
     if (!email || !attestationResponse) {
       return res.status(400).json({ error: "Missing email or attestation response" });
     }
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    const expectedOrigin = "https://neuro-wallet.vercel.app";
-    const expectedRPID = "neuro-wallet.vercel.app";
+    const { origin, rpID } = getRpConfig(req);
 
     const verification = await verifyRegistrationResponse({
       response: attestationResponse,
-      expectedChallenge: user.currentChallenge, // saved from generate-registration-options
-      expectedOrigin,
-      expectedRPID,
+      expectedChallenge: user.currentChallenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
     });
-
-    console.log("Verification result:", verification);
 
     if (verification.verified && verification.registrationInfo) {
       const { credential } = verification.registrationInfo;
 
-      // Normalize credentialID
       const credentialID = base64url.encode(credential.id);
       const credentialPublicKey = Buffer.from(credential.publicKey).toString("base64");
-      const counter = credential.counter || 0;
 
-      // Save credential (separate collection)
       await Credential.create({
         userId: user._id,
         credentialID,
         credentialPublicKey,
-        counter,
+        counter: credential.counter || 0,
       });
 
-      // Mark user as passkey-enabled
       user.hasPasskey = true;
-      user.currentChallenge = undefined; // clear challenge
-
-      // Decide next path based on profile completeness
-
+      user.currentChallenge = undefined;
       await user.save();
 
-      return res.json({
-        success: true,
-        credentialID,
-      });
-    } else {
-      return res.status(400).json({ error: "Registration verification failed" });
+      return res.json({ success: true, credentialID });
     }
+
+    return res.status(400).json({ error: "Registration verification failed" });
   } catch (err) {
     console.error("❌ Error in /verify-registration:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-
+// -------------------- Authentication --------------------
 router.post("/generate-authentication-options", async (req, res) => {
   try {
     const { email } = req.body;
@@ -136,33 +120,21 @@ router.post("/generate-authentication-options", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const userCreds = await Credential.find({ userId: user._id });
+    const creds = await Credential.find({ userId: user._id });
 
-    console.log("🔎 userCreds:", userCreds);
-
-    const allowCredentials = userCreds
-    .filter(cred => !!cred.credentialID)
-    .map(cred => ({
-      id: cred.credentialID, // ✅ keep as base64url string
+    const allowCredentials = creds.map((cred) => ({
+      id: cred.credentialID,
       type: "public-key",
-      transports: cred.transports && cred.transports.length > 0
-        ? cred.transports
-        : ["usb", "ble", "nfc", "internal"],
+      transports: cred.transports?.length > 0 ? cred.transports : ["internal"],
     }));
 
     const options = await generateAuthenticationOptions({
       timeout: 60000,
-      userVerification: "required",   // force biometric verification
+      userVerification: "required", // ✅ force biometrics
       allowCredentials,
-      rpID: "neuro-wallet.vercel.app",
-      authenticatorSelection: {
-        authenticatorAttachment: "platform", // ✅ ensures built-in biometric is used
-      },
     });
 
     user.currentChallenge = options.challenge;
-
-    
     await user.save();
 
     res.json(options);
@@ -172,67 +144,52 @@ router.post("/generate-authentication-options", async (req, res) => {
   }
 });
 
-
-/**
- * Verify Authentication
- */
+// -------------------- Verify Authentication --------------------
 router.post("/verify-authentication", async (req, res) => {
   try {
     const { email, assertionResponse } = req.body;
+    if (!email || !assertionResponse) {
+      return res.status(400).json({ error: "Missing email or assertion response" });
+    }
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const creds = await Credential.find({ userId: user._id });
+    if (!creds || creds.length === 0) {
+      return res.status(404).json({ error: "No credentials found" });
     }
 
-    // Find credential used
-    const matchingCred = await Credential.findOne({ userId: user._id, credentialID: assertionResponse.id });
-    if (!matchingCred) {
-      return res.status(404).json({ error: "Credential not found" });
-    }
+    const { origin, rpID } = getRpConfig(req);
 
+    const dbAuthenticator = creds[0]; // pick first for demo
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
-      expectedOrigin: "https://neuro-wallet.vercel.app",
-      expectedRPID: "neuro-wallet.vercel.app/",
-      credential: {
-        id: matchingCred.credentialID,
-        publicKey: Buffer.from(matchingCred.credentialPublicKey, "base64"),
-        counter: matchingCred.counter || 0,
-        transports: matchingCred.transports || [],
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      authenticator: {
+        credentialID: base64url.toBuffer(dbAuthenticator.credentialID),
+        credentialPublicKey: Buffer.from(dbAuthenticator.credentialPublicKey, "base64"),
+        counter: dbAuthenticator.counter,
       },
     });
 
     if (verification.verified) {
-      // ✅ Update counter with new one from authenticator
-      const newCounter = verification.authenticationInfo.newCounter;
-      matchingCred.counter = newCounter;
-      await matchingCred.save();
+      dbAuthenticator.counter = verification.authenticationInfo.newCounter;
+      await dbAuthenticator.save();
 
-      // Clear challenge
       user.currentChallenge = undefined;
       await user.save();
 
-
-      let nextPath = redirect;
-      if (!user.name || !user.phone) {
-        nextPath = "/complete-profile";
-      }
-
-      return res.json({
-        success: true,
-        nextPath,
-      });
-
-    } else {
-      return res.status(400).json({ success: false, verified: false });
+      return res.json({ verified: true });
     }
+
+    res.status(400).json({ verified: false, error: "Authentication failed" });
   } catch (err) {
     console.error("❌ Error in /verify-authentication:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
 
 module.exports = router;
