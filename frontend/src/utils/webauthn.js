@@ -1,9 +1,18 @@
 // base64url helpers
 export function bufToB64Url(buf) {
-  const bytes = new Uint8Array(buf);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  if (!buf) {
+    console.error("bufToB64Url: Input buffer is null or undefined");
+    return "";
+  }
+  try {
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  } catch (err) {
+    console.error("bufToB64Url: Error converting buffer to Base64URL", err);
+    return "";
+  }
 }
 
 export function b64UrlToBuf(b64url) {

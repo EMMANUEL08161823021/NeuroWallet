@@ -132,85 +132,93 @@ export default function Login() {
 
 
   // --- Passkey Login ---
-const onPasskeyLogin = async () => {
-  setBusy(true);
-  setLoginPasskeyBusy(true);
-  setMsg(null);
+  const onPasskeyLogin = async () => {
+    setBusy(true);
+    setLoginPasskeyBusy(true);
+    setMsg(null);
 
-  try {
-    // Step 1: Get authentication options from backend
-    const optionsRes = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      }
-    );
-
-
-    if (!optionsRes.ok) throw new Error("Failed to fetch authentication options");
-    const options = await optionsRes.json();
-
-    console.log("Origin:", window.location.origin);
-
-
-
-    console.log("options:", options);
-    
-
-    // Step 2: Prepare options for navigator.credentials
-  console.log("allowCredentials before prepPublicKeyOptions:", options.allowCredentials);
-  const publicKey = prepPublicKeyOptions(options);
-  console.log("allowCredentials after prepPublicKeyOptions:", publicKey.allowCredentials);
-
-  console.log("publickey", publicKey);
-
-    let assertion;
     try {
-      assertion = await navigator.credentials.get({ publicKey });
-      console.log("Assertion:", assertion);
-    } catch (err) {
-      console.error("navigator.credentials.get failed:", err);
-    }
+      // Step 1: Get authentication options from backend
+      const optionsRes = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
 
-    
-    if (!assertion) throw new Error("No assertion generated");
 
-    const auth = assertionToJSON(assertion);
+      if (!optionsRes.ok) throw new Error("Failed to fetch authentication options");
+      
+      const options = await optionsRes.json();
 
-    console.log("auth:", auth);
-    
+      console.log("Origin:", window.location.origin);
 
-    // Step 4: Verify authentication with backend
-    const verifyRes = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, assertionResponse: auth }),
+
+
+      console.log("options:", options);
+      
+
+      // Step 2: Prepare options for navigator.credentials
+      console.log("allowCredentials before prepPublicKeyOptions:", options.allowCredentials);
+      const publicKey = prepPublicKeyOptions(options);
+      console.log("allowCredentials after prepPublicKeyOptions:", publicKey.allowCredentials);
+
+      // ✅ Add these checks here
+      console.log("challenge (after prep):", new Uint8Array(publicKey.challenge));
+      publicKey.allowCredentials.forEach((c, i) => {
+        console.log(`cred[${i}].id (after prep):`, new Uint8Array(c.id));
+      });
+
+      console.log("publicKey", publicKey);
+
+      // Step 3: Call WebAuthn API
+      let assertion;
+      try {
+        assertion = await navigator.credentials.get({ publicKey });
+        console.log("Assertion:", assertion);
+      } catch (err) {
+        console.error("navigator.credentials.get failed:", err);
       }
-    );
 
-    if (!verifyRes.ok) throw new Error("Failed to verify authentication");
-    const verify = await verifyRes.json();
+      
+      if (!assertion) throw new Error("No assertion generated");
 
-    // Step 5: Redirect based on backend result
-    if (verify?.verified) {
-      setNotice("ok", "✅ Passkey verified");
-      navigate(verify.nextPath || "/dashboard"); // Use nextPath returned by backend
-    } else {
-      setNotice("err", "❌ Passkey authentication failed");
+      const auth = assertionToJSON(assertion);
+
+      console.log("auth:", auth);
+      
+
+      // Step 4: Verify authentication with backend
+      const verifyRes = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, assertionResponse: auth }),
+        }
+      );
+
+      if (!verifyRes.ok) throw new Error("Failed to verify authentication");
+      const verify = await verifyRes.json();
+
+      // Step 5: Redirect based on backend result
+      if (verify?.verified) {
+        setNotice("ok", "✅ Passkey verified");
+        navigate(verify.nextPath || "/dashboard"); // Use nextPath returned by backend
+      } else {
+        setNotice("err", "❌ Passkey authentication failed");
+      }
+
+    } catch (e) {
+      console.error("Passkey login error:", e);
+      setNotice("err", "⚠️ Passkey authentication failed");
+    } finally {
+      setBusy(false);
+      setLoginPasskeyBusy(false);
     }
-
-  } catch (e) {
-    console.error("Passkey login error:", e);
-    setNotice("err", "⚠️ Passkey authentication failed");
-  } finally {
-    setBusy(false);
-    setLoginPasskeyBusy(false);
-  }
-};
+  };
 
 
 
