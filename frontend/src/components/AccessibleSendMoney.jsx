@@ -79,16 +79,16 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
   const handleFund = async () => {
     try {
-      const token = localStorage.getItem("token"); // 👈 make sure you stored token after login
+      // const token = localStorage.getItem("token"); // 👈 make sure you stored token after login
 
       const res = await axios.post(
-          "http://localhost:9000/api/wallet/fund",
+          `${import.meta.env.VITE_BACKEND_URL}/api/wallet/fund`,
           { email, amount },
-          {
-          headers: {
-              Authorization: `Bearer ${token}`, // 👈 correct format
-          },
-          }
+          // {
+          // headers: {
+          //     Authorization: `Bearer ${token}`, // 👈 correct format
+          // },
+          // }
       );
 
       console.log("Response", res);

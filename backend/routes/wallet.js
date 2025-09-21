@@ -20,7 +20,7 @@ function auth(req, res, next) {
 }
 
 // Get user wallet + transactions
-router.get("/me", auth, async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
     const user = await User.findById(req.user);
     res.json({ balance: user.wallet.balance, transactions: user.transactions });
@@ -31,7 +31,7 @@ router.get("/me", auth, async (req, res) => {
 
 
 // Initialize Paystack Payment
-router.post("/fund", auth, async (req, res) => {
+router.post("/fund", async (req, res) => {
   try {
     const { amount, email } = req.body;
 
@@ -40,7 +40,7 @@ router.post("/fund", auth, async (req, res) => {
       {
         email,
         amount: amount * 100, // in kobo
-        callback_url: "http://localhost:5174/payment/callback", // 👈 must match your React route
+        callback_url: "https://neuro-wallet.vercel.app/payment/callback", // 👈 must match your React route
       },
       {
         headers: {
