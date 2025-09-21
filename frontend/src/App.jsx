@@ -14,8 +14,9 @@ import AccessibleTransfer from './components/AccessibleTransfer/AccessibleTransf
 // import MagicCallback from './components/MagicCallback';
 import AuthCallback from './components/AuthCallback';
 import AccessibleSendMoney from './components/AccessibleSendMoney';
-import SendMoney from './components/SendMoney';
+// import SendMoney from './components/SendMoney';
 import CompleteProfile from './components/CompleteProfile';
+import PaymentCallback from './pages/PaymentCallback';
 
 
 function App() {
@@ -33,6 +34,8 @@ function App() {
         <Route path="/send" element={<Send/>} />
         <Route path="/complete-profile" element={<CompleteProfile/>} />
         <Route path="/sendmoney" element={<AccessibleSendMoney/>} />
+        <Route path="/payment/callback" element={<PaymentCallback />} />
+
         {/* <Route path="/auth/magic" element={<MagicCallback />} /> */}
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route

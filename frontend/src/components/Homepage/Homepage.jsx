@@ -211,7 +211,7 @@ const Homepage = () => {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
       <div className="p-6 rounded-lg h-screen shadow-md max-w-lg mx-auto border-2 border-black">
         <div className="flex justify-between">
           <h2>Dashboard</h2>
@@ -233,7 +233,7 @@ const Homepage = () => {
         </ul> */}
         <AccessibleSendMoney/>
 
-        <h3 className="text-lg font-semibold mb-2">Beneficiaries</h3>
+        {/* <h3 className="text-lg font-semibold mb-2">Beneficiaries</h3>
         <input
           type="search"
           className="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -330,7 +330,7 @@ const Homepage = () => {
               </div>
             </form>
           </div>
-        )}
+        )} */}
 
         <GestureButton
           onTap={() => startListening("command")}

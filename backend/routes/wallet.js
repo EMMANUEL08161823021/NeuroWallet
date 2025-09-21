@@ -40,7 +40,7 @@ router.post("/fund", async (req, res) => {
       {
         email,
         amount: amount * 100, // in kobo
-        callback_url: "https://neuro-wallet.vercel.app/payment/callback", // 👈 must match your React route
+        callback_url: "http://localhost:5173/payment/callback", // 👈 must match your React route
       },
       {
         headers: {
@@ -100,7 +100,10 @@ router.post("/transfer", auth, async (req, res) => {
 
 
 // Verify Payment & Update Balance
-router.get("/verify/:reference", auth, async (req, res) => {
+router.get("/verify/:reference", async (req, res) => {
+
+  console.log("req:", req);
+  
   try {
     const { reference } = req.params;
 
@@ -115,9 +118,11 @@ router.get("/verify/:reference", auth, async (req, res) => {
 
     const data = verifyRes.data.data;
     if (data.status === "success") {
-      const user = await User.findById(req.user);
+      const user = await User.findOne({ email: data.customer.email });
 
-      user.wallet.balance += data.amount / 100; // Paystack sends kobo
+      if (!user) return res.status(404).json({ msg: "User not found" });
+
+      user.wallet.balance += data.amount / 100;
       user.transactions.push({
         type: "fund",
         amount: data.amount / 100,
