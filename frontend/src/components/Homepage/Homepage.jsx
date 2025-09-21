@@ -71,9 +71,9 @@ const Homepage = () => {
   useEffect(() => {
       const fetchWallet = async () => {
       try {
-          const token = localStorage.getItem("token");
-          const res = await axios.get("http://localhost:9000/api/wallet/me", {
-          headers: { Authorization: `Bearer ${token}` }
+          // const token = localStorage.getItem("token");
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/me`, {
+          // headers: { Authorization: `Bearer ${token}` }
           });
           setBalance(res.data.balance);
           setTransactions(res.data.transactions);
