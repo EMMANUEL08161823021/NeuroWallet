@@ -55,6 +55,11 @@ function b64UrlToBuf(b64url) {
   return Buffer.from(b64, "base64"); // ✅ Node.js Buffer
 }
 
+// function b64UrlToBuf(b64urlString) {
+//   // decode base64url to Node Buffer
+//   return Buffer.from(base64url.toBuffer(b64urlString));
+// }
+
 
 // -------------------- Registration --------------------
 router.post("/generate-registration-options", async (req, res) => {
@@ -207,100 +212,61 @@ router.post("/generate-authentication-options", async (req, res) => {
 router.post("/verify-authentication", async (req, res) => {
   try {
     const { email, assertionResponse } = req.body;
-    if (!email || !assertionResponse) {
-      return res.status(400).json({ error: "Missing email or assertion response" });
-    }
 
-    console.log("Received assertionResponse:", JSON.stringify(assertionResponse, null, 2));
-    console.log("Raw assertionResponse.id (hex):", bufferToHex(b64UrlToBuf(assertionResponse.id)));
-
+    // Step 1: Find user & credential
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    const credentialID = assertionResponse.id;
-    const dbCred = await Credential.findOne({ credentialID });
-    if (!dbCred) {
-      console.error("Credential not found in DB for ID:", credentialID);
-      return res.status(400).json({ error: "Credential not registered" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    console.log("dbCred:", JSON.stringify(dbCred.toObject(), null, 2));
-
-    const { origin: expectedOrigin, rpID: expectedRPID } = getRpConfig(req);
-    console.log("Verification parameters:", {
-      expectedChallenge: user.currentChallenge,
-      expectedOrigin,
-      expectedRPID,
-    });
-
-    // ✅ Fix: Validate credential data before creating authenticator
-    if (!dbCred.credentialID || !dbCred.credentialPublicKey) {
-      console.error("Missing credential data:", {
-        credentialID: !!dbCred.credentialID,
-        credentialPublicKey: !!dbCred.credentialPublicKey,
-      });
-      return res.status(400).json({ error: "Invalid credential data in database" });
+    const dbCred = await Credential.findOne({ userId: user._id });
+    if (!dbCred || !dbCred.credentialPublicKey) {
+      return res.status(404).json({ error: "No registered credential found" });
     }
 
-    // Convert base64url strings to Uint8Array (not Node.js Buffer)
-    const credentialIDBuffer = b64UrlToBuf(dbCred.credentialID);
-    const credentialPublicKeyBuffer = b64UrlToBuf(dbCred.credentialPublicKey);
+    // Step 2: Convert stored Base64URL strings to Buffers
+    let credentialPublicKey = base64url.toBuffer(dbCred.credentialPublicKey);
+    const credentialID = base64url.toBuffer(dbCred.credentialID);
 
-    // Validate buffers
-    if (!credentialIDBuffer || !credentialPublicKeyBuffer) {
-      console.error("Failed to decode credential data:", {
-        credentialID: !!credentialIDBuffer,
-        credentialPublicKey: !!credentialPublicKeyBuffer,
-      });
-      return res.status(400).json({ error: "Failed to decode credential data" });
-    }
 
-    // ✅ Fix: Convert Node.js Buffers to Uint8Array for @simplewebauthn/server
-    const authenticator = {
-      credentialID: new Uint8Array(credentialIDBuffer),
-      credentialPublicKey: new Uint8Array(credentialPublicKeyBuffer),
-      counter: Number(dbCred.counter) || 0,
-      transports: Array.isArray(dbCred.transports) ? dbCred.transports : ["internal"],
+    console.log("credentialPublickey:", credentialPublicKey);
+    console.log("credentialID:", credentialID);
+
+    // Step 3: Set verification parameters
+    const verificationParams = {
+      response: assertionResponse,
+      expectedChallenge: user.currentChallenge, // or wherever you stored it
+      expectedOrigin: "http://localhost:5173", // your frontend origin
+      expectedRPID: "localhost",               // your RP ID
+      credential: {
+        credentialID,
+        credentialPublicKey,
+        counter: dbCred.counter,
+      },
+      requireUserVerification: true,
     };
 
-    console.log("Authenticator object created:", {
-      credentialID: bufferToHex(authenticator.credentialID),
-      credentialPublicKey: bufferToHex(authenticator.credentialPublicKey),
-      counter: authenticator.counter,
-      transports: authenticator.transports,
-    });
+    console.log("verificationParams:", verificationParams);
+    
 
-    console.log("dbCred.credentialPublicKey (stored):", dbCred.credentialPublicKey);
-    console.log("decoded credentialPublicKey (Buffer, hex):", credentialPublicKeyBuffer.toString("hex"));
+    // Step 4: Verify the assertion
+    const verification = await verifyAuthenticationResponse(verificationParams);
 
-    // ✅ Fix: Use 'authenticator' parameter instead of 'credential'
-    const verification = await verifyAuthenticationResponse({
-      response: assertionResponse,
-      expectedChallenge: user.currentChallenge,
-      expectedOrigin: expectedOrigin,
-      expectedRPID: expectedRPID,
-      authenticator: authenticator, // ✅ Changed from 'credential' to 'authenticator'
-    });
+    // Step 5: Update counter in DB
+    dbCred.counter = verification.authenticationInfo.newCounter;
+    await dbCred.save();
 
-    console.log("Authentication verification result:", JSON.stringify(verification, null, 2));
-
+    // Step 6: Return result
     if (verification.verified) {
-      dbCred.counter = verification.authenticationInfo?.newCounter ?? dbCred.counter;
-      await dbCred.save();
-
-      user.currentChallenge = undefined;
-      await user.save();
-
-      return res.json({ success: true });
+      return res.json({ verified: true, nextPath: "/dashboard" });
+    } else {
+      return res.status(400).json({ verified: false });
     }
-
-    return res.status(400).json({ error: "Authentication failed" });
-  } catch (err) {
-    console.error("❌ Error in /verify-authentication:", err);
-    return res.status(500).json({ error: `Authentication failed: ${err.message}` });
+  } catch (error) {
+    console.error("Error verifying authentication:", error);
+    res.status(500).json({ error: error.message });
   }
 });
-
 
 
 module.exports = router;

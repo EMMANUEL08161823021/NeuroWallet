@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import Tesseract from "tesseract.js";
+import FundWallet from "../pages/FundWallet";
+import FingerprintConsole from "./FingerprintConsole/FingerprintConsole";
 
 /**
  * AccessibleSendMoney
@@ -72,6 +74,33 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const [listening, setListening] = useState(false);
   const holdTimer = useRef(null);
   const idempotencyRef = useRef(null);
+  const email = 'emmanueloguntolu48@gmail.com';
+
+
+  const handleFund = async () => {
+    try {
+      const token = localStorage.getItem("token"); // 👈 make sure you stored token after login
+
+      const res = await axios.post(
+          "http://localhost:9000/api/wallet/fund",
+          { email, amount },
+          {
+          headers: {
+              Authorization: `Bearer ${token}`, // 👈 correct format
+          },
+          }
+      );
+
+      console.log("Response", res);
+      
+
+      window.location.href = res.data.data.authorization_url;
+
+      console.log(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // live region ref for screen readers
   const liveRef = useRef(null);
@@ -275,8 +304,8 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   };
 
   return (
-    <div className="p-6 h-screen rounded-lg shadow-md max-w-lg border-2 border-black mx-auto bg-white dark:bg-gray-900 dark:text-gray-100">
-      <h2 className="text-2xl font-bold mb-4">Send Money (Accessible)</h2>
+    <div className="h-screen rounded-lg shadow-md max-w-lg border-2 border-black mx-auto bg-white dark:bg-gray-900 dark:text-gray-100">
+      {/* <h2 className="text-2xl font-bold mb-4">Send Money (Accessible)</h2> */}
 
       {/* live region for screen readers */}
       <div aria-live="polite" ref={liveRef} className="sr-only" />
@@ -342,6 +371,9 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       {stage === "amount" && (
         <div className="space-y-4">
           <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+            <h2>Fund Wallet (Sending Money to account)</h2>
+            {/* <button onClick={handleFund}>Fund Wallet</button> */}
+
             <p><strong>Detected:</strong></p>
             <p>Bank: <span className="font-medium">{bankName || "Not found"}</span></p>
             <p>Account: <span className="font-medium">{accountNumber || "Not found"}</span></p>
@@ -367,17 +399,22 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
       {stage === "confirm" && (
         <div className="space-y-4">
+
           <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
             <p><strong>Confirm Transfer</strong></p>
+            <p>Email: <span className="font-medium">{email || "Not found"}</span></p>
             <p>Bank: <span className="font-medium">{bankName}</span></p>
             <p>Account: <span className="font-medium">{accountNumber}</span></p>
             <p>Amount: <span className="font-medium">₦{amount}</span></p>
+            {/* <button onClick={handleFund}>Fund Wallet</button> */}
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Place your finger on the fingerprint console below to confirm.  
             Or double-tap Cancel transaction.
           </p>
+
+          <FingerprintConsole onConfirm={handleFund} onCancel={() => setStage("cancelled")} />
         </div>
       )}
 

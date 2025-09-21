@@ -3,6 +3,7 @@ import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognitio
 import FundWallet from "../../pages/FundWallet";
 import Transfer from "../../pages/Transfer";
 import axios from "axios";
+import AccessibleSendMoney from "../AccessibleSendMoney";
 
 
 
@@ -212,12 +213,13 @@ const Homepage = () => {
   return (
     <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 min-h-screen">
       <div className="p-6 rounded-lg h-screen shadow-md max-w-lg mx-auto border-2 border-black">
-        <h2>Dashboard</h2>
-        <h3>Wallet Balance: ₦{balance}</h3>
+        <div className="flex justify-between">
+          <h2>Dashboard</h2>
+          <h3>Wallet Balance: ₦{balance}</h3>
+        </div>
 
-        <FundWallet/>
-        <Transfer/>
 
+{/* 
         <h4>Transactions</h4>
         <ul>
           {transactions.map((t, i) => (
@@ -228,7 +230,8 @@ const Homepage = () => {
               ({new Date(t.createdAt).toLocaleString()})
           </li>
           ))}
-        </ul>
+        </ul> */}
+        <AccessibleSendMoney/>
 
         <h3 className="text-lg font-semibold mb-2">Beneficiaries</h3>
         <input

@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { Fingerprint } from "lucide-react";
 
-export default function FingerprintConsole({ onCancel }) {
+export default function FingerprintConsole({ onCancel, onConfirm }) {
   const [status, setStatus] = useState("Ready");
   const pressStartTime = useRef(null);
   const touchStartX = useRef(null);
@@ -36,6 +36,8 @@ export default function FingerprintConsole({ onCancel }) {
     if (success) {
       setStatus("✅ Transfer Successful");
       speak("Transfer successful");
+
+      if (onConfirm) onConfirm(); // ✅ Call handleFund from parent
     } else {
       setStatus("❌ Transfer Failed");
       speak("Transfer failed");
@@ -52,6 +54,7 @@ export default function FingerprintConsole({ onCancel }) {
   // 👆 Handle press (for tap/hold)
   const handlePress = () => {
     pressStartTime.current = Date.now();
+    
   };
 
   const handleRelease = () => {

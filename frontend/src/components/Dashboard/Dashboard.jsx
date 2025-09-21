@@ -10,7 +10,7 @@ import AccessibleSendMoney from "../AccessibleSendMoney.jsx";
 
 export default function Dashboard() {
   const [index, setIndex] = useState(0);
-  const pages = [<HomePage />, <Transactions />, <Profile />, <Settings />, <AccessibleSendMoney/>];
+  const pages = [<HomePage />, <Transactions />, <Profile />, <Settings />];
   const labels = ["Home", "Transactions", "Profile", "Settings", "Send"];
 
   // 🔊 Speak page name + update screen reader region
