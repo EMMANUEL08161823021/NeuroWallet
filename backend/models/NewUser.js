@@ -3,13 +3,6 @@ const bcrypt = require("bcrypt");
 
 const mongoose = require("mongoose");
 
-const webAuthnCredentialSchema = new mongoose.Schema({
-  credentialID: { type: String, required: true },     // base64url encoded
-  publicKey: { type: String, required: true },        // base64url encoded
-  counter: { type: Number, default: 0 },              // prevent replay attacks
-  transports: [{ type: String }],                     // e.g. ["usb", "ble", "nfc", "internal"]
-});
-
 const UserSchema = new mongoose.Schema({
   name: { type: String},
   email: { type: String, required: true, unique: true },
@@ -32,7 +25,6 @@ const UserSchema = new mongoose.Schema({
     },
   ],
   currentChallenge: { type: String }, // temporary challenge storage
-  webAuthnCredentials: [webAuthnCredentialSchema], // multiple devices
 });
 
 // ✅ Prevent OverwriteModelError

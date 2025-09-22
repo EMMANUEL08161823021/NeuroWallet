@@ -1,5 +1,6 @@
 // controllers/profile.controller.js
 const User = require("../models/NewUser");
+const jwt = require("jsonwebtoken");
 
 
 exports.completeProfile = async (req, res, next) => {
@@ -29,8 +30,17 @@ exports.completeProfile = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Generate JWT token after profile completion
+    const token = jwt.sign(
+      { sub: updatedUser._id, email: updatedUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" } // token valid for 7 days
+    );
+
     res.json({
+      success: true,
       message: "Profile completed successfully",
+      token, // return token to frontend
       user: {
         id: updatedUser._id,
         name: updatedUser.name,

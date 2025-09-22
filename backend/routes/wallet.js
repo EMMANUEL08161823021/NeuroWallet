@@ -20,7 +20,7 @@ function auth(req, res, next) {
 }
 
 // Get user wallet + transactions
-router.get("/me", async (req, res) => {
+router.get("/me", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user);
     res.json({ balance: user.wallet.balance, transactions: user.transactions });
@@ -31,7 +31,7 @@ router.get("/me", async (req, res) => {
 
 
 // Initialize Paystack Payment
-router.post("/fund", async (req, res) => {
+router.post("/fund", auth, async (req, res) => {
   try {
     const { amount, email } = req.body;
 
@@ -40,7 +40,7 @@ router.post("/fund", async (req, res) => {
       {
         email,
         amount: amount * 100, // in kobo
-        callback_url: "http://localhost:5173/payment/callback", // 👈 must match your React route
+        callback_url: `${process.env.VITE_FRONTEND_URL}/payment/callback`, // 👈 must match your React route
       },
       {
         headers: {
@@ -100,10 +100,7 @@ router.post("/transfer", auth, async (req, res) => {
 
 
 // Verify Payment & Update Balance
-router.get("/verify/:reference", async (req, res) => {
-
-  console.log("req:", req);
-  
+router.get("/verify/:reference", auth, async (req, res) => {
   try {
     const { reference } = req.params;
 
@@ -118,11 +115,9 @@ router.get("/verify/:reference", async (req, res) => {
 
     const data = verifyRes.data.data;
     if (data.status === "success") {
-      const user = await User.findOne({ email: data.customer.email });
+      const user = await User.findById(req.user);
 
-      if (!user) return res.status(404).json({ msg: "User not found" });
-
-      user.wallet.balance += data.amount / 100;
+      user.wallet.balance += data.amount / 100; // Paystack sends kobo
       user.transactions.push({
         type: "fund",
         amount: data.amount / 100,

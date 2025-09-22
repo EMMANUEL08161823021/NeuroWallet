@@ -1,8 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import Tesseract from "tesseract.js";
+import FundWallet from "../pages/FundWallet";
 import FingerprintConsole from "./FingerprintConsole/FingerprintConsole";
 import axios from "axios";
+
+/**
+ * AccessibleSendMoney
+ *
+ * Flow implemented:
+ * 1. User clicks "Send Money" -> camera opens automatically
+ * 2. Snap image -> OCR extracts account number + bank name
+ * 3. App asks "How much do you want to send?" -> listens via SpeechRecognition
+ * 4. App reads back amount -> "You are sending..."
+ * 5. Fingerprint console: tap = cancel, hold = confirm (900ms)
+ * 6. On confirm: call /api/transfers with Idempotency-Key, play success/fail sound and announce result
+ *
+ * Note: Replace fetch URLs and Authorization header with your token handling.
+ */
 
 function speak(text) {
   try {
@@ -10,82 +25,153 @@ function speak(text) {
     u.lang = "en-US";
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
-  } catch {}
+  } catch (e) {
+    // ignore if unavailable
+    // console.warn("Speech synth not available", e);
+  }
 }
 
+// crude number-from-words attempt (best-effort)
 function parseAmountFromSpeech(transcript) {
+  // prefer explicit digits first
   const digits = transcript.match(/(\d+(?:,\d{3})*(?:\.\d+)?)/);
   if (digits) return parseFloat(digits[1].replace(/,/g, ""));
-  return null; // fallback to manual entry
+
+  // simple words-to-number parsing for common cases:
+  const map = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10,
+    twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90,
+    hundred:100, thousand:1000, million:1000000
+  };
+  const tokens = transcript.toLowerCase().replace(/-/g,' ').split(/\s+/);
+  let total = 0;
+  let current = 0;
+  for (const t of tokens) {
+    if (map[t] !== undefined) {
+      const val = map[t];
+      if (val >= 100) {
+        current = Math.max(1, current) * val;
+      } else {
+        current += val;
+      }
+    } else if (t === "and") {
+      continue;
+    } else {
+      // ignore tokens like 'naira'
+    }
+  }
+  if (current > 0) total += current;
+  return total > 0 ? total : null;
 }
 
 export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_ACCOUNT_ID" }) {
   const webcamRef = useRef(null);
-  const liveRef = useRef(null);
-  const holdTimer = useRef(null);
-  const idempotencyRef = useRef(null);
-
-  const [stage, setStage] = useState("idle");
-  const [status, setStatus] = useState("Ready");
+  const [stage, setStage] = useState("idle"); // idle -> camera -> ocr -> amount -> confirm -> sending -> done
   const [ocrText, setOcrText] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [email, setEmail] = useState("emmanueloguntolu48@gmail.com");
+  // const [amount, setAmount] = useState("");
+  const [status, setStatus] = useState("Ready");
+  const [listening, setListening] = useState(false);
+  const holdTimer = useRef(null);
+  const idempotencyRef = useRef(null);
+  const email = 'emmanueloguntolu48@gmail.com';
+  const amount = 500;
 
+
+  const handleFund = async () => {
+    try {
+      // const token = localStorage.getItem("token"); // 👈 make sure you stored token after login
+
+      const res = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/wallet/fund`,
+          { email, amount },
+          // {
+          // headers: {
+          //     Authorization: `Bearer ${token}`, // 👈 correct format
+          // },
+          // }
+      );
+
+      console.log("Response", res);
+      
+
+      window.location.href = res.data.data.authorization_url;
+
+      console.log(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // live region ref for screen readers
+  const liveRef = useRef(null);
   useEffect(() => {
     if (liveRef.current) liveRef.current.textContent = status;
   }, [status]);
 
+  // Step 1: open camera
   const startCamera = () => {
+    setStatus("Camera opened. Point at account details and tap 'Snap'.");
+    speak("Camera opened. Point at account details and tap snap.");
     setStage("camera");
-    setStatus("Camera opened. Point at account details and tap Snap.");
-    speak("Camera opened. Point at account details and tap Snap.");
   };
 
+  // Step 2: take snapshot and OCR
   const snapAndOcr = async () => {
-    setStatus("Capturing image...");
-    speak("Capturing image");
-
-    const image = webcamRef.current.getScreenshot();
-    if (!image) {
-      setStatus("Unable to capture image.");
-      speak("Unable to capture image. Try again.");
-      return;
-    }
-
-    setStatus("Scanning image...");
-    speak("Scanning image. Please hold still.");
-
     try {
-      const { data } = await Tesseract.recognize(image, "eng");
-      setOcrText(data.text);
-
-      const accMatch = data.text.match(/\b\d{9,12}\b/);
-      const bankMatch = data.text.match(/\b(Access|GTB|UBA|Zenith|First\s*Bank|Union|Fidelity|Ecobank|Polaris|Sterling|FCMB|Wema|Stanbic|GTBank)\b/i);
-
-      if (!accMatch || !bankMatch) {
-        setStatus("Could not detect account or bank. Try again.");
-        speak("Could not detect account or bank. Try again.");
+      setStatus("Capturing image...");
+      speak("Capturing image");
+      const image = webcamRef.current.getScreenshot();
+      if (!image) {
+        setStatus("Unable to capture image.");
+        speak("Unable to capture image. Try again.");
         return;
       }
 
-      setAccountNumber(accMatch[0]);
-      setBankName(bankMatch[0]);
-      setStage("amount");
+      setStatus("Scanning image. This may take a few seconds...");
+      speak("Scanning image. Please hold still.");
 
-      setStatus("Account details captured. Please enter or speak the amount.");
-      speak(`Account number ${accMatch[0].split("").join("-")}, ${bankMatch[0]}. How much do you want to send?`);
+      const { data } = await Tesseract.recognize(image, "eng", { logger: m => {/* optional logging */} });
+      const text = data?.text || "";
+      setOcrText(text);
+
+      // crude regex: Nigerian account numbers often 10 digits; fallback to 9-12 digits
+      const accMatch = text.match(/\b\d{9,12}\b/);
+      const bankMatch = text.match(/\b(Access|GTB|UBA|Zenith|First\s+Bank|FirstBank|Union|Fidelity|Ecobank|Polaris|Sterling|FCMB|Wema|Stanbic|GTBank)\b/i);
+
+      if (!accMatch || !bankMatch) {
+        setStage("camera");
+      } else {
+        setAccountNumber(accMatch[0]);  // ✅ use [0]
+        setBankName(bankMatch[0]);      // ✅ use [0]
+        setStage("amount");
+
+        // ✅ only start listening if details are valid
+        listenForAmount();
+  
+        setStatus(`Captured ${accMatch ? "account number" : "no account found"} ${bankMatch ? "and bank" : ""}. Asking for amount.`);
+        speak(bankMatch ? `Account number ${accMatch ? accMatch[0].split('').join('-') : 'not found'}, ${bankMatch[0]}. How much do you want to send?` : "Account details captured. How much do you want to send?");
+      }
+
+
+
+      // wait a moment for TTS to finish then start listening? we'll let user press Speak Amount
     } catch (err) {
-      console.error("OCR error:", err);
+      console.error("OCR error", err);
       setStatus("OCR failed. Try again.");
-      speak("OCR failed. Please try again.");
+      speak("Scanning failed. Please try again.");
     }
   };
 
+  // Step 3: listen for amount
   const listenForAmount = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      setStatus("Voice input not supported on this device.");
+      speak("Voice input not supported on this device. Please type the amount.");
+      return;
+    }
 
     const recognition = new SpeechRecognition();
     recognition.lang = "en-NG";
@@ -93,93 +179,167 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
+      setListening(true);
       setStatus("Listening for amount...");
-      speak("Listening for amount. Please say the amount now.");
+      speak("Listening for amount. How much do you wanna send to the receipent. Please say the amount now.");
     };
 
     recognition.onresult = (ev) => {
+      setListening(false);
       const transcript = ev.results[0][0].transcript;
       const parsed = parseAmountFromSpeech(transcript);
-
       if (parsed && !isNaN(parsed)) {
         setAmount(String(parsed));
-        setStage("confirm");
         setStatus(`Amount set to ₦${parsed}`);
-        speak(`Amount set to naira ${parsed}. Place your finger to confirm.`);
+        speak(`Amount set to naira ${parsed}`);
+        setStage("confirm");
+        // read full confirmation
+        const confirmMsg = `You are sending naira ${parsed} to ${bankName || 'the recipient'}, account number ${accountNumber || 'unknown'}. Place your finger to confirm.`;
+        setTimeout(()=> speak(confirmMsg), 500);
       } else {
-        setStatus("Could not understand amount. Please type or speak again.");
+        setStatus("Could not understand amount. Please try again.");
         speak("Could not understand the amount. Please try again.");
       }
     };
 
     recognition.onerror = (err) => {
-      console.error(err);
+      console.error("Speech error", err);
+      setListening(false);
       setStatus("Voice recognition error");
       speak("Voice recognition error. Please try again.");
+    };
+
+    recognition.onend = () => {
+      setListening(false);
     };
 
     recognition.start();
   };
 
+  // generate idempotency key
   const genIdempotency = () => {
-    const key = window.crypto?.randomUUID?.() || `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    idempotencyRef.current = key;
-    return key;
+    const k = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+    idempotencyRef.current = k;
+    return k;
   };
 
-  const handleFund = async () => {
-    if (!amount || !accountNumber) {
-      setStatus("Missing account or amount.");
-      speak("Missing account or amount.");
+  // perform transfer: call backend
+  const performTransfer = async () => {
+    if (!accountNumber || !amount) {
+      setStatus("Missing account number or amount.");
+      speak("Missing account number or amount.");
       return;
     }
-
     setStage("sending");
     setStatus("Processing transfer...");
     speak("Processing transfer. Please wait.");
 
+    const payload = {
+      fromAccountId: defaultFromAccountId,
+      toAccountNumber: accountNumber,
+      amount: Number(amount),
+      memo: "Mobile transfer",
+    };
+
+    const idemp = genIdempotency();
+
     try {
-      const idemp = genIdempotency();
+      // adapt URL & auth
       const token = localStorage.getItem("access") || "";
+      const resp = await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/transfers`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idemp,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
 
-      const resp = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/wallet/fund`,
-        { email, amount },
-        { headers: token ? { Authorization: `Bearer ${token}`, "Idempotency-Key": idemp } : { "Idempotency-Key": idemp } }
-      );
-
-      setStatus("Transfer initialized. Redirecting to payment...");
-      speak("Transfer initialized. Redirecting to payment...");
-      window.location.href = resp.data.data.authorization_url;
+      const data = await resp.json();
+      if (resp.ok) {
+        setStatus("Transfer successful");
+        speak("Transfer successful");
+        // play success sound
+        try { new Audio("/sounds/success.mp3").play(); } catch {}
+        setStage("done");
+      } else {
+        setStatus(data?.error?.message || "Transfer failed");
+        speak(`Transfer failed. ${data?.error?.message || ""}`);
+        try { new Audio("/sounds/fail.mp3").play(); } catch {}
+        setStage("done");
+      }
     } catch (err) {
-      console.error(err);
-      setStatus("Transfer failed");
-      speak("Transfer failed. Please try again.");
+      console.error("Transfer error", err);
+      setStatus("Network error during transfer");
+      speak("Transfer failed due to network error. Please try again.");
+      try { new Audio("/sounds/fail.mp3").play(); } catch {}
       setStage("done");
     }
   };
 
+  // Fingerprint console handlers: tap = cancel, hold = confirm
+  const handlePressStart = () => {
+    // start timer for long press
+    holdTimer.current = setTimeout(async () => {
+      // long hold confirmed
+      setStatus("Confirming with fingerprint...");
+      speak("Confirming. Please complete the fingerprint.");
+      // In production, trigger WebAuthn biometric flow here and verify; for now we proceed
+      await performTransfer();
+    }, 900); // 900ms threshold
+  };
+
+  const handlePressEnd = () => {
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      // if released before threshold => treat as tap -> cancel
+      if (stage === "confirm") {
+        setStatus("Transaction cancelled");
+        speak("Transaction cancelled");
+        setStage("idle");
+        setAccountNumber("");
+        setBankName("");
+        setAmount("");
+      }
+    }
+  };
+
   return (
-    <div className="max-w-lg mx-auto p-4 rounded-lg shadow-lg border dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col gap-4">
+    <div className="max-w-lg mx-auto p-4 rounded-lg shadow-lg border dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col justify-start gap-4">
+
+      {/* Live region for screen readers */}
+      <div aria-live="polite" ref={liveRef} className="sr-only" />
 
       {/* Status */}
       <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm font-medium">
         <span className="font-bold">Status:</span> {status}
       </div>
 
-      {/* OCR Debug */}
+      {/* OCR debug */}
       <details className="text-xs text-gray-500 dark:text-gray-400">
         <summary className="cursor-pointer">OCR Debug</summary>
         <pre className="whitespace-pre-wrap">{ocrText || "—"}</pre>
       </details>
 
-      {/* Stage UI */}
+      {/* Stage-based UI */}
       {stage === "idle" && (
-        <button onClick={startCamera} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg shadow-md">Send Money</button>
+        <div className="space-y-4 text-center">
+          <p className="text-gray-600 dark:text-gray-300">
+            Tap the button to start sending money. The app will guide you with voice and screen reader messages.
+          </p>
+          <button
+            onClick={startCamera}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg shadow-md transition-all"
+            aria-label="Start send money flow"
+          >
+            Send Money
+          </button>
+        </div>
       )}
 
       {stage === "camera" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Webcam
             audio={false}
             ref={webcamRef}
@@ -188,38 +348,93 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
             className="rounded-lg w-full h-60 object-cover border border-gray-200 dark:border-gray-700 shadow-md"
           />
           <div className="flex gap-3">
-            <button onClick={snapAndOcr} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg shadow-md">Snap</button>
-            <button onClick={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }} className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 py-3 rounded-lg">Cancel</button>
+            <button
+              onClick={snapAndOcr}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg shadow-md"
+            >
+              Snap
+            </button>
+            <button
+              onClick={() => {
+                setStage("idle");
+                setStatus("Cancelled");
+                speak("Cancelled");
+              }}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 py-3 rounded-lg shadow-sm"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
       {stage === "amount" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <h2 className="font-semibold mb-2">Fund Wallet</h2>
+            <h2 className="text-lg font-semibold mb-2">Fund Wallet</h2>
+            <p><strong>Detected:</strong></p>
             <p>Bank: <span className="font-medium">{bankName || "Not found"}</span></p>
             <p>Account: <span className="font-medium">{accountNumber || "Not found"}</span></p>
           </div>
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (NGN)" inputMode="numeric" className="w-full p-2 border rounded-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"/>
-          <button onClick={listenForAmount} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg shadow-md">Speak Amount</button>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400">Or type amount below</p>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Amount (NGN)"
+            inputMode="numeric"
+            className="w-full p-2 border rounded-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
+          />
         </div>
       )}
 
       {stage === "confirm" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-md">
             <h2 className="font-semibold mb-2">Confirm Transfer</h2>
-            <p>Email: <span className="font-medium">{email}</span></p>
+            <p>Email: <span className="font-medium">{email || "Not found"}</span></p>
             <p>Bank: <span className="font-medium">{bankName}</span></p>
             <p>Account: <span className="font-medium">{accountNumber}</span></p>
             <p>Amount: <span className="font-medium">₦{amount}</span></p>
           </div>
-          <FingerprintConsole onConfirm={handleFund} onCancel={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }}/>
+
+          <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+            Place your finger on the fingerprint console below to confirm.  
+            Or double-tap Cancel transaction.
+          </p>
+
+          <FingerprintConsole
+            onConfirm={handleFund}
+            onCancel={() => setStage("cancelled")}
+          />
         </div>
       )}
 
-      {stage === "sending" && <p className="text-center animate-pulse font-medium text-lg">Processing transfer...</p>}
+      {stage === "sending" && (
+        <div className="text-center space-y-3">
+          <p className="font-medium text-lg animate-pulse">Processing transfer...</p>
+        </div>
+      )}
+
+      {stage === "done" && (
+        <div className="space-y-4 text-center">
+          <p className="font-semibold text-green-600">{status}</p>
+          <button
+            onClick={() => {
+              setStage("idle");
+              setStatus("Ready");
+              setAccountNumber("");
+              setBankName("");
+              setAmount("");
+            }}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg shadow-md transition-all"
+          >
+            Done
+          </button>
+        </div>
+      )}
     </div>
+
+
   );
 }

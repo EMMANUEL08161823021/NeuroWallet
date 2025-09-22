@@ -84,7 +84,6 @@ export default function Login() {
   };
 
   // --- Passkey register ---
-// --- Passkey register ---
   const onPasskeyRegister = async () => {
     setBusy(true);
     setMsg(null);
@@ -201,15 +200,18 @@ export default function Login() {
       );
 
       if (!verifyRes.ok) throw new Error("Failed to verify authentication");
+
       const verify = await verifyRes.json();
 
-      // Step 5: Redirect based on backend result
-      if (verify?.verified) {
+      // ✅ Store token and redirect
+      if (verify?.verified && verify.token) {
+        localStorage.setItem("token", verify.token); // store token
         setNotice("ok", "✅ Passkey verified");
-        navigate(verify.nextPath || "/dashboard"); // Use nextPath returned by backend
+        navigate(verify.nextPath || "/dashboard"); // navigate to backend-specified path
       } else {
         setNotice("err", "❌ Passkey authentication failed");
       }
+
 
     } catch (e) {
       console.error("Passkey login error:", e);

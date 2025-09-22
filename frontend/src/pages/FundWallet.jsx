@@ -11,7 +11,7 @@ const FundWallet = ({email, bankName, accountNumber, amount}) => {
       const token = localStorage.getItem("token"); // 👈 make sure you stored token after login
 
       const res = await axios.post(
-        "http://localhost:9000/api/wallet/fund",
+        `${import.meta.env.VITE_BACKEND_URL}/api/wallet/fund`,
         { email, amount },
         {
         headers: {

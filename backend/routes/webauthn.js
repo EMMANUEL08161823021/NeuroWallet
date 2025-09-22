@@ -10,6 +10,8 @@ const {
 const User = require("../models/NewUser");
 const Credential = require("../models/Credential");
 
+const jwt = require("jsonwebtoken");
+
 // const { bufToB64Url } = require("../../frontend/src/utils/webauthn");
 
 const router = express.Router();
@@ -184,7 +186,7 @@ router.post("/generate-authentication-options", async (req, res) => {
     }));
 
     const options = await generateAuthenticationOptions({
-      rpID: "localhost", // ⚠️ replace with your real domain in production
+      rpID: "neuro-wallet.vercel.app", // ⚠️ replace with your real domain in production
       timeout: 60000,
       userVerification: "required",
       allowCredentials,
@@ -213,52 +215,61 @@ router.post("/verify-authentication", async (req, res) => {
   try {
     const { email, assertionResponse } = req.body;
 
-    // Step 1: Find user & credential
+    // Step 1: Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Step 2: Find credential
     const dbCred = await Credential.findOne({ userId: user._id });
     if (!dbCred || !dbCred.credentialPublicKey) {
       return res.status(404).json({ error: "No registered credential found" });
     }
 
-    // Step 2: Convert stored Base64URL strings to Buffers
-    let credentialPublicKey = base64url.toBuffer(dbCred.credentialPublicKey);
-    const credentialID = base64url.toBuffer(dbCred.credentialID);
+    // Step 3: Convert stored values back to Buffers
+    const id = dbCred.credentialID; // Keep as Base64URL string
+    const publicKey = base64url.toBuffer(dbCred.credentialPublicKey);
 
+    // Optional: check frontend rawId matches stored credentialID
+    if (assertionResponse.rawId !== id) {
+      return res.status(400).json({ error: "Credential ID mismatch" });
+    }
 
-    console.log("credentialPublickey:", credentialPublicKey);
-    console.log("credentialID:", credentialID);
-
-    // Step 3: Set verification parameters
-    const verificationParams = {
+    // Step 4: Verify
+    const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
-      expectedChallenge: user.currentChallenge, // or wherever you stored it
-      expectedOrigin: "http://localhost:5173", // your frontend origin
-      expectedRPID: "localhost",               // your RP ID
+      expectedChallenge: user.currentChallenge,
+      expectedOrigin: "https://neuro-wallet.vercel.app",
+      expectedRPID: "neuro-wallet.vercel.app",
       credential: {
-        credentialID,
-        credentialPublicKey,
+        id,
+        publicKey,
         counter: dbCred.counter,
       },
       requireUserVerification: true,
-    };
+    });
 
-    console.log("verificationParams:", verificationParams);
-    
-
-    // Step 4: Verify the assertion
-    const verification = await verifyAuthenticationResponse(verificationParams);
-
-    // Step 5: Update counter in DB
-    dbCred.counter = verification.authenticationInfo.newCounter;
-    await dbCred.save();
-
-    // Step 6: Return result
+    // Step 5: Update counter
     if (verification.verified) {
-      return res.json({ verified: true, nextPath: "/dashboard" });
+      dbCred.counter = verification.authenticationInfo.newCounter;
+      await dbCred.save();
+
+      // ✅ Generate JWT
+      const token = jwt.sign(
+        { sub: user._id, email: email },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      console.log("token:", token);
+      
+
+      return res.json({
+        verified: true,
+        token,       // send this token to the frontend
+        nextPath: (!user.name || !user.phone) ? "/complete-profile" : "/dashboard",
+      });
     } else {
       return res.status(400).json({ verified: false });
     }
@@ -267,6 +278,7 @@ router.post("/verify-authentication", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 
 module.exports = router;

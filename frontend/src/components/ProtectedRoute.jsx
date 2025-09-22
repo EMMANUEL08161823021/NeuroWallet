@@ -2,7 +2,7 @@
 import { Navigate } from "react-router-dom";
 
 export default function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("access");
+  const token = localStorage.getItem("token");
 
   // if no token, block access
   if (!token) {
