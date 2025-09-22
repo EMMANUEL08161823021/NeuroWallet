@@ -45,10 +45,10 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const holdTimer = useRef(null);
   const idempotencyRef = useRef(null);
 
-  const [stage, setStage] = useState("idle");
+  const [stage, setStage] = useState("amount");
   const [ocrText, setOcrText] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("0687158934");
+  const [bankName, setBankName] = useState("GTB");
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState("Ready");
   const pressStartTime = useRef(null);

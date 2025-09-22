@@ -79,7 +79,7 @@ router.post("/generate-registration-options", async (req, res) => {
 
     const options = await generateRegistrationOptions({
       rpName: "NeuroWallet",
-      rpID,
+      rpID: "neuro-wallet.vercel.app",
       userName: user.email,
       userID: Buffer.from(user._id.toString()),
       attestationType: "none",
@@ -167,8 +167,6 @@ router.post("/verify-registration", async (req, res) => {
 
 
 
-
-
 router.post("/generate-authentication-options", async (req, res) => {
   try {
     const { email } = req.body;
@@ -185,8 +183,9 @@ router.post("/generate-authentication-options", async (req, res) => {
       transports: cred.transports?.length > 0 ? cred.transports : ["internal"],
     }));
 
+
     const options = await generateAuthenticationOptions({
-      rpID: "localhost", // ⚠️ replace with your real domain in production
+      rpID: "neuro-wallet.vercel.app", // ⚠️ replace with your real domain in production
       timeout: 60000,
       userVerification: "required",
       allowCredentials,
@@ -240,8 +239,8 @@ router.post("/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
-      expectedOrigin: "http://localhost:5173",
-      expectedRPID: "localhost",
+      expectedOrigin: "https://neuro-wallet.vercel.app",
+      expectedRPID: "neuro-wallet.vercel.app",
       credential: {
         id,
         publicKey,
