@@ -103,14 +103,6 @@ export default function FingerprintConsole({ onCancel, onConfirm }) {
       >
         <Fingerprint size={80} strokeWidth={1.5} />
       </div>
-
-      {/* Instructions */}
-      {/* <div className="text-center text-sm text-gray-600 space-y-1">
-        <p>👆 Tap → Voice Command</p>
-        <p>✋ Hold ≥ 1s → Confirm</p>
-        <p>👈 Swipe Left → Cancel</p>
-      </div> */}
-
       {/* Status */}
       <div className="mt-2 text-base font-medium">{status}</div>
     </div>

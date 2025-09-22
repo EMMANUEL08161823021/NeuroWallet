@@ -186,7 +186,7 @@ router.post("/generate-authentication-options", async (req, res) => {
     }));
 
     const options = await generateAuthenticationOptions({
-      rpID: "neuro-wallet.vercel.app", // ⚠️ replace with your real domain in production
+      rpID: "localhost", // ⚠️ replace with your real domain in production
       timeout: 60000,
       userVerification: "required",
       allowCredentials,
@@ -240,8 +240,8 @@ router.post("/verify-authentication", async (req, res) => {
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge: user.currentChallenge,
-      expectedOrigin: "https://neuro-wallet.vercel.app",
-      expectedRPID: "neuro-wallet.vercel.app",
+      expectedOrigin: "http://localhost:5173",
+      expectedRPID: "localhost",
       credential: {
         id,
         publicKey,

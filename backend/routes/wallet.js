@@ -57,7 +57,7 @@ router.post("/fund", requireAuth, async (req, res) => {
       {
         email,
         amount: amount * 100, // in kobo
-        callback_url: `${process.env.VITE_FRONTEND_URL}/payment/callback`, // 👈 must match your React route
+        callback_url: "http://localhost:5173/payment/callback", // 👈 must match your React route
       },
       {
         headers: {

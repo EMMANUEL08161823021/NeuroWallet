@@ -211,126 +211,14 @@ const Homepage = () => {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen">
       <div className="p-6 rounded-lg h-screen shadow-md max-w-lg mx-auto border-2 border-black">
-        <div className="flex justify-between">
+        <div className="flex py-2 justify-between">
           <h2>Dashboard</h2>
           <h3>Wallet Balance: ₦{balance}</h3>
         </div>
 
-
-{/* 
-        <h4>Transactions</h4>
-        <ul>
-          {transactions.map((t, i) => (
-          <li key={i}>
-              [{t.type.toUpperCase()}] ₦{t.amount} 
-              {t.to && <> → {t.to}</>} 
-              {t.from && <> ← {t.from}</>} 
-              ({new Date(t.createdAt).toLocaleString()})
-          </li>
-          ))}
-        </ul> */}
         <AccessibleSendMoney/>
-
-        {/* <h3 className="text-lg font-semibold mb-2">Beneficiaries</h3>
-        <input
-          type="search"
-          className="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Search beneficiary..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search beneficiaries"
-        />
-
-        <div className="space-y-2">
-          {filteredBeneficiaries.map((b, idx) => (
-            <div
-              key={idx}
-              className="border p-2 rounded flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              tabIndex="0"
-              onClick={() => setSelectedBeneficiary(b)}
-              onKeyPress={(e) => e.key === "Enter" && setSelectedBeneficiary(b)}
-              aria-label={`Select ${b.name} from ${b.provider}`}
-            >
-              <div>
-                <p className="font-medium">{b.name}</p>
-                <span className="text-sm text-gray-600">{b.provider}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {selectedBeneficiary && (
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold">Transfer to {selectedBeneficiary.name}</h3>
-            <p className="text-sm text-gray-600">
-              {selectedBeneficiary.account} {selectedBeneficiary.provider}
-            </p>
-
-            {error && <p className="text-red-500 mt-2" aria-live="polite">{error}</p>}
-            {listeningForAmount && <p className="text-blue-500 mt-2" aria-live="polite">Listening...</p>}
-
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div>
-                <label htmlFor="amount" className="block text-gray-700">Amount ($)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  id="amount"
-                  value={amount}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "") {
-                      setAmount("");
-                      setNumericAmount(null);
-                    } else {
-                      const parsed = parseFloat(value);
-                      setAmount(value);
-                      setNumericAmount(parsed);
-                    }
-                    setError("");
-                  }}
-                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-required="true"
-                  placeholder="Enter or speak amount"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="description" className="block text-gray-700">Description</label>
-                <input
-                  type="text"
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-required="true"
-                  placeholder="What's this for?"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => startListening("command")}
-                  disabled={listening}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:bg-gray-400"
-                  aria-label={listening ? "Listening for speech" : "Start speaking command"}
-                >
-                  {listening ? "Listening..." : "Speak Command"}
-                </button>
-                <button
-                  type="submit"
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                  aria-label="Confirm transfer"
-                >
-                  Transfer
-                </button>
-              </div>
-            </form>
-          </div>
-        )} */}
 
         <GestureButton
           onTap={() => startListening("command")}

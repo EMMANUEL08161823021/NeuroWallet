@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import Tesseract from "tesseract.js";
-import FingerprintConsole from "./FingerprintConsole/FingerprintConsole";
+// import FingerprintConsole from "./FingerprintConsole/FingerprintConsole";
 import axios from "axios";
+import { Fingerprint } from "lucide-react";
 
 // Text-to-speech helper
 function speak(text) {
@@ -12,6 +13,23 @@ function speak(text) {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   } catch {}
+}
+
+// --- Utility functions ---
+function bufToB64Url(buf) {
+  if (!buf) return "";
+  return Buffer.from(buf)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function b64UrlToBuf(b64url) {
+  if (!b64url) return null;
+  const pad = "=".repeat((4 - (b64url.length % 4)) % 4);
+  const b64 = (b64url + pad).replace(/-/g, "+").replace(/_/g, "/");
+  return Buffer.from(b64, "base64");
 }
 
 // crude number-from-speech parser
@@ -27,16 +45,17 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const holdTimer = useRef(null);
   const idempotencyRef = useRef(null);
 
-  const [stage, setStage] = useState("amount");
+  const [stage, setStage] = useState("idle");
   const [ocrText, setOcrText] = useState("");
-  const [accountNumber, setAccountNumber] = useState("7082658990");
-  const [bankName, setBankName] = useState("GTB");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState("Ready");
+  const pressStartTime = useRef(null);
+  const touchStartX = useRef(null);
   const [listening, setListening] = useState(false);
 
   const email = "emmanueloguntolu48@gmail.com"; // Example email
-  const fixedAmount = 500; // Default/fixed amount
 
   // Update live region for screen readers
   useEffect(() => {
@@ -134,50 +153,146 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     recognition.start();
   };
 
-  // --- Handle Fund Wallet ---
+  // 🎤 Voice Recognition
+  const startVoiceCommand = () => {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-US";
+    recognition.start();
+
+    recognition.onresult = (event) => {
+      const command = event.results[0][0].transcript;
+      setStatus(`Command: "${command}"`);
+      speak(`You said: ${command}`);
+    };
+
+    recognition.onerror = () => {
+      speak("Sorry, I couldn't understand.");
+    };
+  };
+
+  // 🔊 Text-to-Speech
+  const speak = (text) => {
+    const synth = window.speechSynthesis;
+    synth.speak(new SpeechSynthesisUtterance(text));
+  };
+
   const handleFund = async () => {
     try {
-      const token = localStorage.getItem("token"); // must send JWT
+      const token = localStorage.getItem("token");
+      
+      // Step 1: Initiate funding on backend
       const res = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/fund`,
         { amount },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      window.location.href = res.data.data.authorization_url;
+
+      const { authorization_url, reference } = res.data.data; // get Paystack URL & reference
+
+      // Step 2: Open Paystack payment in new tab/window
+      window.open(authorization_url, "_blank");
+
+      // Step 3: Poll backend to verify payment (or call after redirect)
+      const interval = setInterval(async () => {
+        try {
+          const verifyRes = await axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/api/wallet/verify/${reference}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          if (verifyRes.data.balance !== undefined) {
+            clearInterval(interval);
+            setStatus("✅ Transfer Successful");
+            speak("Transfer successful");
+          }
+        } catch (err) {
+          console.error("Error verifying payment:", err);
+        }
+      }, 2000); // check every 2 seconds
     } catch (err) {
       console.error(err);
-      setStatus("Failed to initiate fund.");
+      setStatus("❌ Transfer Failed");
+      speak("Transfer failed");
     }
   };
 
 
-  // --- Fingerprint handlers ---
   const handlePressStart = () => {
-    holdTimer.current = setTimeout(async () => {
-      setStatus("Confirming with fingerprint...");
-      speak("Confirming. Please complete the fingerprint.");
-      if (stage === "confirm") await handleFund();
-    }, 900);
+    pressStartTime.current = Date.now();
   };
 
-  const handlePressEnd = () => {
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-      if (stage === "confirm") {
-        setStatus("Transaction cancelled");
-        speak("Transaction cancelled");
-        setStage("idle");
-        setAccountNumber("");
-        setBankName("");
-        setAmount("");
+  const handlePressEnd = async () => {
+    if (!pressStartTime.current) return;
+
+    const pressDuration = Date.now() - pressStartTime.current;
+
+    // Tap (short press)
+    if (pressDuration < 1000) {
+      setStatus("Tap detected - try long press to confirm");
+    } else {
+      // Long press → WebAuthn authentication
+      try {
+        setStatus("Authenticating...");
+        
+        const email = localStorage.getItem("email"); // must be stored earlier
+        if (!email) throw new Error("No email found for authentication");
+
+        // 1️⃣ Generate authentication options
+        const optsRes = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
+          { email }
+        );
+        const options = optsRes.data;
+
+        // Convert challenge + allowCredentials IDs to ArrayBuffer
+        options.challenge = b64UrlToBuf(options.challenge);
+        options.allowCredentials = options.allowCredentials.map((cred) => ({
+          ...cred,
+          id: b64UrlToBuf(cred.id),
+        }));
+
+        // 2️⃣ Trigger WebAuthn
+        const assertion = await navigator.credentials.get({ publicKey: options });
+
+        // Convert rawId + authenticatorData etc. to base64url for backend
+        const authResponse = {
+          id: assertion.id,
+          rawId: bufToB64Url(assertion.rawId),
+          response: {
+            authenticatorData: bufToB64Url(assertion.response.authenticatorData),
+            clientDataJSON: bufToB64Url(assertion.response.clientDataJSON),
+            signature: bufToB64Url(assertion.response.signature),
+            userHandle: bufToB64Url(assertion.response.userHandle),
+          },
+          type: assertion.type,
+        };
+
+        // 3️⃣ Verify on backend
+        const verifyRes = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
+          { email, assertionResponse: authResponse }
+        );
+
+        if (verifyRes.data.verified && verifyRes.data.token) {
+          localStorage.setItem("token", verifyRes.data.token);
+          setStatus("✅ Authenticated. Proceeding to fund...");
+          
+          // 4️⃣ Call fund function
+          await handleFund(); // <-- your existing fund logic
+        } else {
+          setStatus("❌ Authentication failed");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus("❌ Authentication error: " + err.message);
       }
     }
+
+    pressStartTime.current = null;
   };
 
   return (
-    <div className="relative min-h-screen pb-44 p-4 bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col gap-4">
+    <div className="relative bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col gap-4">
       {/* Live region for screen readers */}
       <div aria-live="polite" ref={liveRef} className="sr-only" />
 
@@ -193,7 +308,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       </details>
 
       {/* Stage-based content */}
-      {/* {stage === "idle" && (
+      {stage === "idle" && (
         <div className="space-y-4 text-center">
           <p className="text-gray-600 dark:text-gray-300">
             Tap the button to start sending money. The app will guide you with voice and screen reader messages.
@@ -228,7 +343,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
             </button>
           </div>
         </div>
-      )} */}
+      )}
 
       {stage === "amount" && (
         <div className="space-y-4">
@@ -286,15 +401,27 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
           </div>
         </div>
       )}
-      {/* --- Fixed Fingerprint Console --- */}
-      <FingerprintConsole
-        onConfirm={stage === "confirm" ? handleFund : () => {}}
-        onCancel={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }}
-        onPressStart={handlePressStart}
-        onPressEnd={handlePressEnd}
-      />
-      {/* <div className="fixed bottom-0 left-0 w-full bg-gray-50 dark:bg-gray-900 p-3 shadow-inner flex justify-center z-50">
-      </div> */}
+
+      <div className="fixed w-full bottom-4 left-0 flex flex-col items-center gap-1">
+        {/* Fingerprint Button */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Tap to speak. Hold to confirm transfer. Swipe left to cancel."
+          onMouseDown={handlePressStart}      // start timer for long press
+          onMouseUp={handlePressEnd}          // end press → decide tap vs long press
+          onTouchStart={handlePressStart}     // same for touch devices
+          onTouchEnd={handlePressEnd}         // same for touch devices
+          className="w-40 h-40 rounded-full bg-blue-600 active:bg-blue-700 
+                    flex items-center justify-center shadow-2xl text-white select-none"
+        >
+          <Fingerprint size={80} strokeWidth={1.5} />
+        </div>
+
+        {/* Status text */}
+        <div className="mt-2 text-base font-medium text-center">{status}</div>
+      </div>
+
     </div>
 
   );
