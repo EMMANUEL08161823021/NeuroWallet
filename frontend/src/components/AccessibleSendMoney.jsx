@@ -27,10 +27,10 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const holdTimer = useRef(null);
   const idempotencyRef = useRef(null);
 
-  const [stage, setStage] = useState("idle");
+  const [stage, setStage] = useState("amount");
   const [ocrText, setOcrText] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("7082658990");
+  const [bankName, setBankName] = useState("GTB");
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState("Ready");
   const [listening, setListening] = useState(false);
@@ -137,9 +137,13 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   // --- Handle Fund Wallet ---
   const handleFund = async () => {
     try {
+      const token = localStorage.getItem("token"); // must send JWT
       const res = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/fund`,
-        { email, amount: fixedAmount }
+        { amount },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
       window.location.href = res.data.data.authorization_url;
     } catch (err) {
@@ -147,6 +151,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       setStatus("Failed to initiate fund.");
     }
   };
+
 
   // --- Fingerprint handlers ---
   const handlePressStart = () => {
@@ -188,7 +193,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       </details>
 
       {/* Stage-based content */}
-      {stage === "idle" && (
+      {/* {stage === "idle" && (
         <div className="space-y-4 text-center">
           <p className="text-gray-600 dark:text-gray-300">
             Tap the button to start sending money. The app will guide you with voice and screen reader messages.
@@ -223,7 +228,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
             </button>
           </div>
         </div>
-      )}
+      )} */}
 
       {stage === "amount" && (
         <div className="space-y-4">

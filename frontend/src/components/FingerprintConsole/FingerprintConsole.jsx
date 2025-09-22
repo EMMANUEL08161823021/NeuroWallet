@@ -54,7 +54,7 @@ export default function FingerprintConsole({ onCancel, onConfirm }) {
   // 👆 Handle press (for tap/hold)
   const handlePress = () => {
     pressStartTime.current = Date.now();
-    
+    performTransfer();
   };
 
   const handleRelease = () => {

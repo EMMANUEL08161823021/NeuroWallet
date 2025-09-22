@@ -3,6 +3,8 @@ const axios = require("axios");
 const User = require("../models/NewUser");
 const jwt = require("jsonwebtoken");
 
+const { requireAuth } = require("../middleware/auth");
+
 const router = express.Router();
 
 // Middleware to check auth
@@ -20,10 +22,19 @@ function auth(req, res, next) {
 }
 
 // Get user wallet + transactions
-router.get("/me", auth, async (req, res) => {
+
+router.get("/me", requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user);
-    res.json({ balance: user.wallet.balance, transactions: user.transactions });
+    const user = await User.findById(req.user.sub); // <- use sub from JWT
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      balance: user.wallet.balance,
+      transactions: user.transactions,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -31,9 +42,15 @@ router.get("/me", auth, async (req, res) => {
 
 
 // Initialize Paystack Payment
-router.post("/fund", auth, async (req, res) => {
+router.post("/fund", requireAuth, async (req, res) => {
   try {
-    const { amount, email } = req.body;
+    const { amount } = req.body;
+
+    // Get email from middleware
+    const email = req.user?.email;
+    if (!email) {
+      return res.status(400).json({ error: "User email not found" });
+    }
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
@@ -60,7 +77,7 @@ router.post("/fund", auth, async (req, res) => {
 
 
 // Internal Transfer
-router.post("/transfer", auth, async (req, res) => {
+router.post("/transfer", requireAuth, async (req, res) => {
   try {
     const { email, amount } = req.body; 
     const sender = await User.findById(req.user);
@@ -100,7 +117,7 @@ router.post("/transfer", auth, async (req, res) => {
 
 
 // Verify Payment & Update Balance
-router.get("/verify/:reference", auth, async (req, res) => {
+router.get("/verify/:reference", requireAuth, async (req, res) => {
   try {
     const { reference } = req.params;
 
@@ -115,7 +132,9 @@ router.get("/verify/:reference", auth, async (req, res) => {
 
     const data = verifyRes.data.data;
     if (data.status === "success") {
-      const user = await User.findById(req.user);
+      const user = await User.findById(req.user.sub); // <- use sub here
+
+      if (!user) return res.status(404).json({ msg: "User not found" });
 
       user.wallet.balance += data.amount / 100; // Paystack sends kobo
       user.transactions.push({
@@ -138,6 +157,7 @@ router.get("/verify/:reference", auth, async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 });
+
 
 
 
