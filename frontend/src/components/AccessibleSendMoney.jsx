@@ -269,16 +269,6 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         </div>
       )}
 
-      {/* --- Fixed Fingerprint Console --- */}
-      <div className="fixed bottom-0 left-0 w-full bg-gray-50 dark:bg-gray-900 p-3 shadow-inner flex justify-center z-50">
-        <FingerprintConsole
-          onConfirm={stage === "confirm" ? handleFund : () => {}}
-          onCancel={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }}
-          onPressStart={handlePressStart}
-          onPressEnd={handlePressEnd}
-        />
-      </div>
-
       {/* Confirm details shown above the console */}
       {stage === "confirm" && (
         <div className="fixed bottom-24 left-0 w-full px-4">
@@ -291,6 +281,16 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
           </div>
         </div>
       )}
+      {/* --- Fixed Fingerprint Console --- */}
+      <FingerprintConsole
+        onConfirm={stage === "confirm" ? handleFund : () => {}}
+        onCancel={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }}
+        onPressStart={handlePressStart}
+        onPressEnd={handlePressEnd}
+      />
+      {/* <div className="fixed bottom-0 left-0 w-full bg-gray-50 dark:bg-gray-900 p-3 shadow-inner flex justify-center z-50">
+      </div> */}
     </div>
+
   );
 }
