@@ -258,7 +258,7 @@ router.post("/verify-authentication", async (req, res) => {
       const token = jwt.sign(
         { sub: user._id, email: email },
         process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+        { expiresIn: "1h" }
       );
 
       console.log("token:", token);

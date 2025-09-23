@@ -206,7 +206,6 @@ export default function Login() {
       // ✅ Store token and redirect
       if (verify?.verified && verify.token) {
         localStorage.setItem("token", verify.token); // store token
-        localStorage.setItem("email", email); // store token
         setNotice("ok", "✅ Passkey verified");
         navigate(verify.nextPath || "/dashboard"); // navigate to backend-specified path
       } else {

@@ -1,41 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+import { useApp } from "../../context/AppContext";
 
 export default function Transactions() {
   const [query, setQuery] = useState("");
   const [selectedTxn, setSelectedTxn] = useState(null);
 
-  const transactions = [
-    {
-      id: 1,
-      name: "Airtime Purchase",
-      date: "2025-09-05",
-      status: "Success",
-      amount: 2000,
-      provider: "MTN",
-      description: "₦2000 airtime purchase",
-    },
-    {
-      id: 2,
-      name: "Electricity Bill",
-      date: "2025-09-04",
-      status: "Failed",
-      amount: 10000,
-      provider: "Ikeja Electric",
-      description: "Token not generated",
-    },
-    {
-      id: 3,
-      name: "Transfer to James",
-      date: "2025-09-03",
-      status: "Pending",
-      amount: 5000,
-      provider: "Bank Transfer",
-      description: "Pending confirmation",
-    },
-  ];
+  const { user, wallet, loading } = useApp();
 
-  const filtered = transactions.filter((txn) =>
-    txn.name.toLowerCase().includes(query.toLowerCase())
+  // filter by type, reference, to, from
+  const filtered = wallet.filter((txn) =>
+    `${txn.type} ${txn.reference} ${txn.to} ${txn.from}`
+      .toLowerCase()
+      .includes(query.toLowerCase())
   );
 
   return (
@@ -46,7 +24,7 @@ export default function Transactions() {
       <input
         type="search"
         className="w-full p-2 border rounded-lg mb-4 focus:ring focus:ring-blue-400"
-        placeholder="Search by name..."
+        placeholder="Search transactions..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -57,29 +35,35 @@ export default function Transactions() {
 
       {/* Transaction List */}
       <ul className="space-y-3">
-        {filtered.map((txn) => (
+        {filtered.map((txn, idx) => (
           <li
-            key={txn.id}
+            key={idx}
             onClick={() => setSelectedTxn(txn)}
             className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition"
           >
             <div>
-              <p className="font-semibold">{txn.name}</p>
-              <p className="text-sm text-gray-500">{txn.date}</p>
+              <p className="font-semibold">
+                {txn.type === "fund"
+                  ? "Wallet Funding"
+                  : `Transfer ${txn.to ? "to " + txn.to : ""}`}
+              </p>
+              <p className="text-sm text-gray-500">
+                {new Date(txn.date).toLocaleString()}
+              </p>
             </div>
             <div className="text-right">
               <span
                 className={`px-2 py-1 rounded text-xs font-medium ${
-                  txn.status === "Success"
+                  txn.status === "success"
                     ? "bg-green-100 text-green-700"
-                    : txn.status === "Failed"
+                    : txn.status === "failed"
                     ? "bg-red-100 text-red-700"
                     : "bg-yellow-100 text-yellow-700"
                 }`}
               >
                 {txn.status}
               </span>
-              <p className="font-bold">₦{txn.amount.toLocaleString()}</p>
+              <p className="font-bold">₦{txn.amount?.toLocaleString()}</p>
             </div>
           </li>
         ))}
@@ -99,12 +83,13 @@ export default function Transactions() {
               </button>
             </div>
             <div className="space-y-2 text-sm">
-              <p><strong>Name:</strong> {selectedTxn.name}</p>
+              <p><strong>Type:</strong> {selectedTxn.type}</p>
               <p><strong>Amount:</strong> ₦{selectedTxn.amount.toLocaleString()}</p>
-              <p><strong>Date:</strong> {selectedTxn.date}</p>
-              <p><strong>Provider:</strong> {selectedTxn.provider}</p>
+              <p><strong>Date:</strong> {new Date(selectedTxn.date).toLocaleString()}</p>
+              <p><strong>Reference:</strong> {selectedTxn.reference}</p>
+              {selectedTxn.to && <p><strong>To:</strong> {selectedTxn.to}</p>}
+              {selectedTxn.from && <p><strong>From:</strong> {selectedTxn.from}</p>}
               <p><strong>Status:</strong> {selectedTxn.status}</p>
-              <p><strong>Description:</strong> {selectedTxn.description}</p>
             </div>
             <div className="mt-6 text-right">
               <button

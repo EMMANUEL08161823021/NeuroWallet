@@ -5,6 +5,9 @@ import Transfer from "../../pages/Transfer";
 import axios from "axios";
 import AccessibleSendMoney from "../AccessibleSendMoney";
 
+import { useApp } from "../../context/AppContext";
+
+
 
 
 
@@ -64,25 +67,12 @@ const Homepage = () => {
 
   ];
 
+  const {balance} = useApp();
 
-  const [balance, setBalance] = useState(0);
-  const [transactions, setTransactions] = useState([]);
 
-  useEffect(() => {
-      const fetchWallet = async () => {
-      try {
-          const token = localStorage.getItem("token");
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-          });
-          setBalance(res.data.balance);
-          setTransactions(res.data.transactions);
-      } catch (err) {
-          console.error(err);
-      }
-      };
-      fetchWallet();
-  }, []);
+  // const [balance, setBalance] = useState(0);
+  // const [transactions, setTransactions] = useState([]);
+
 
   const filteredBeneficiaries = beneficiaries.filter((b) =>
     `${b.name} ${b.provider}`.toLowerCase().includes(query.trim().toLowerCase())

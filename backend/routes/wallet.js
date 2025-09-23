@@ -57,7 +57,7 @@ router.post("/fund", requireAuth, async (req, res) => {
       {
         email,
         amount: amount * 100, // in kobo
-        callback_url: "http://localhost:5173/payment/callback", // 👈 must match your React route
+        callback_url: "https://neuro-wallet.vercel.app/payment/callback", // 👈 must match your React route
       },
       {
         headers: {
@@ -71,6 +71,29 @@ router.post("/fund", requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err.response?.data || err.message);
     res.status(500).json({ msg: "Paystack init error" });
+  }
+});
+
+router.get("/profile", requireAuth, async (req, res) => {
+  try {
+    const email = req.user.email; // ✅ decoded from JWT inside requireAuth
+
+    console.log("Decoded email:", email);
+
+    const user = await User.findOne({ email });
+
+    res.json({
+      success: true,
+      user: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        kycLevel: user.kycLevel || "Tier 1",
+      },
+    });
+  } catch (err) {
+    console.error("Profile fetch error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 

@@ -44,10 +44,6 @@ export default function Dashboard() {
       {/* 🔊 Hidden live region for screen readers */}
       <div id="live-region" aria-live="polite" className="sr-only"></div>
 
-      {/* Bottom console (Fingerprint, etc.) */}
-      {/* <div className="fixed bottom-4 w-full flex gap-2 justify-center">
-        <FingerprintConsole />
-      </div> */}
     </div>
   );
 }
