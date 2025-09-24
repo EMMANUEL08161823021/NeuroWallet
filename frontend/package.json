@@ -15,6 +15,7 @@
     "@stripe/stripe-js": "^7.3.0",
     "axios": "^1.12.2",
     "bootstrap": "^5.3.6",
+    "buffer": "^6.0.3",
     "clj-fuzzy": "^0.4.1",
     "dotenv": "^16.5.0",
     "framer-motion": "^12.23.12",

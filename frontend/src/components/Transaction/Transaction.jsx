@@ -7,14 +7,20 @@ export default function Transactions() {
   const [query, setQuery] = useState("");
   const [selectedTxn, setSelectedTxn] = useState(null);
 
-  const { user, wallet, loading } = useApp();
+  const {wallet} = useApp();
 
-  // filter by type, reference, to, from
-  const filtered = wallet.filter((txn) =>
+  // Sort wallet by date descending (latest first)
+  const sortedWallet = [...wallet].sort(
+    (a, b) => new Date(b.date) - new Date(a.date)
+  );
+
+  // Then filter
+  const filtered = sortedWallet.filter((txn) =>
     `${txn.type} ${txn.reference} ${txn.to} ${txn.from}`
       .toLowerCase()
       .includes(query.toLowerCase())
   );
+
 
   return (
     <div className="p-6 h-screen rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">

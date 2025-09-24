@@ -11,6 +11,7 @@ const User = require("../models/NewUser");
 const Credential = require("../models/Credential");
 
 const jwt = require("jsonwebtoken");
+const { requireAuth } = require("../middleware/auth");
 
 // const { bufToB64Url } = require("../../frontend/src/utils/webauthn");
 
@@ -258,7 +259,7 @@ router.post("/verify-authentication", async (req, res) => {
       const token = jwt.sign(
         { sub: user._id, email: email },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "7d" }
       );
 
       console.log("token:", token);

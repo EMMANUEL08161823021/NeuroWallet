@@ -38,18 +38,6 @@ const GestureButton = ({ onTap, onDoubleTap, onSwipe }) => {
     }
   };
 
-  // return (
-  //   <button
-  //   style={{width: '100%', padding: '40px'}}
-  //     ref={buttonRef}
-  //     onTouchStart={handleTouchStart}
-  //     onTouchMove={handleTouchMove}
-  //     className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
-  //     aria-label="Interact with gestures: tap to speak commands, double tap to cancel, swipe to confirm"
-  //   >
-  //     Interact
-  //   </button>
-  // );
 };
 
 const Homepage = () => {
@@ -68,10 +56,6 @@ const Homepage = () => {
   ];
 
   const {balance} = useApp();
-
-
-  // const [balance, setBalance] = useState(0);
-  // const [transactions, setTransactions] = useState([]);
 
 
   const filteredBeneficiaries = beneficiaries.filter((b) =>

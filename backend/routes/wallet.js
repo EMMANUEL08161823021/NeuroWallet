@@ -7,19 +7,35 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// Middleware to check auth
-function auth(req, res, next) {
-  const token = req.header("Authorization")?.replace("Bearer ", "");
-  if (!token) return res.status(401).json({ msg: "No token" });
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded.id;
-    next();
-  } catch {
-    res.status(401).json({ msg: "Invalid token" });
-  }
+async function resolveAccount(account_number, bank_code) {
+  if (!account_number || !bank_code) throw new Error("Missing params");
+  const url = "https://api.paystack.co/bank/resolve";
+  const params = { account_number, bank_code };
+
+  const resp = await axios.get(url, {
+    params,
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+    },
+  });
+
+  // resp.data.data.account_name contains the resolved name
+  return resp.data;
 }
+
+
+// usage in a route
+router.get("/resolve-account", requireAuth, async (req, res) => {
+  try {
+    const { account_number, bank_code } = req.query;
+    const result = await resolveAccount(account_number, bank_code);
+    res.json({ success: true, data: result.data });
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ success: false, error: err.response?.data || err.message });
+  }
+});
 
 // Get user wallet + transactions
 
@@ -41,7 +57,7 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 
-// Initialize Paystack Payment
+// Initialize Paystack Payment NOW WORKS LIVE TO FUND PAYSTACK ACCOUNT
 router.post("/fund", requireAuth, async (req, res) => {
   try {
     const { amount } = req.body;
@@ -74,6 +90,8 @@ router.post("/fund", requireAuth, async (req, res) => {
   }
 });
 
+
+
 router.get("/profile", requireAuth, async (req, res) => {
   try {
     const email = req.user.email; // ✅ decoded from JWT inside requireAuth
@@ -98,43 +116,88 @@ router.get("/profile", requireAuth, async (req, res) => {
 });
 
 
-
-// Internal Transfer
-router.post("/transfer", requireAuth, async (req, res) => {
-  try {
-    const { email, amount } = req.body; 
-    const sender = await User.findById(req.user);
-    const receiver = await User.findOne({ email });
-
-    if (!receiver) return res.status(404).json({ msg: "Receiver not found" });
-    if (sender.wallet.balance < amount) return res.status(400).json({ msg: "Insufficient balance" });
-
-    // Update balances
-    sender.wallet.balance -= amount;
-    receiver.wallet.balance += amount;
-
-    // ✅ log transactions
-    sender.transactions.push({
-      type: "transfer",
-      amount,
-      to: receiver.email,
-      status: "success"
-    });
-
-    receiver.transactions.push({
-      type: "transfer",
-      amount,
-      from: sender.email,
-      status: "success"
-    });
-
-    await sender.save();
-    await receiver.save();
-
-    res.json({ msg: "Transfer successful", balance: sender.wallet.balance });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+// POST /api/wallet/recipient
+router.post("/recipient", requireAuth, async (req, res) => {
+  const { name, account_number, bank_code, currency = "NGN" } = req.body;
+  if (!name || !account_number || !bank_code) {
+    return res.status(400).json({ msg: "Missing recipient info" });
   }
+  try {
+    const response = await axios.post(
+      "https://api.paystack.co/transferrecipient",
+      { type: "nuban", name, account_number, bank_code, currency },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+    // Save response.data.data.recipient_code in your DB linked to the user
+    res.json({ success: true, recipient: response.data.data });
+  } catch (err) {
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
+});
+
+
+// POST /api/wallet/transfer
+router.post("/transfer", requireAuth, async (req, res) => {
+  const { recipient_code, amount } = req.body; // amount in NGN
+  const user = await User.findById(req.user.sub);
+
+  if (!recipient_code || !amount || amount <= 0) return res.status(400).json({ msg: "Invalid input" });
+  if (user.wallet.balance < amount) return res.status(400).json({ msg: "Insufficient balance" });
+
+  try {
+    // Create internal transaction record (pending)
+    const tx = {
+      type: "transfer",
+      amount,
+      to: recipient_code,
+      status: "pending",
+      reference: `tx_${Date.now()}` // or use a UUID
+    };
+    user.transactions.push(tx);
+    user.wallet.balance -= amount; // optimistically deduct; handle rollback if failure
+    await user.save();
+
+    // Initiate Paystack transfer (amount in kobo)
+    const paystackRes = await axios.post(
+      "https://api.paystack.co/transfer",
+      { source: "balance", amount: Math.round(amount * 100), recipient: recipient_code, reference: tx.reference },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    // Update transaction with immediate response
+    tx.paystack = paystackRes.data.data;
+    tx.status = paystackRes.data.data.status === "success" ? "success" : "processing";
+    await user.save();
+
+    res.json({ success: true, transfer: paystackRes.data.data });
+  } catch (err) {
+    // Rollback internal balance if needed
+    // (fetch user again or handle properly)
+    console.error(err);
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
+});
+
+
+// POST /api/paystack/webhook
+router.post("/webhook", express.json({ type: "*/*" }), async (req, res) => {
+  // Verify webhook signature if you want (recommended)
+  const event = req.body;
+  // Example: event.event === 'transfer.success'
+  if (event.event === "transfer.success") {
+    const data = event.data; // contains reference, recipient, amount, etc.
+    // Find the user transaction by reference and mark success
+    await User.updateOne({ "transactions.reference": data.reference }, {
+      $set: { "transactions.$.status": "success", "transactions.$.paystack": data }
+    });
+  } else if (event.event === "transfer.failed") {
+    // handle failed: refund internal balance or mark failed
+    await User.updateOne({ "transactions.reference": event.data.reference }, {
+      $set: { "transactions.$.status": "failed", "transactions.$.paystack": event.data }
+    });
+    // Optionally credit user back
+  }
+  res.json({ received: true });
 });
 
 
