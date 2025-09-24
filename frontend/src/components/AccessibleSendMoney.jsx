@@ -162,7 +162,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       // 1) Resolve account name
       const token = localStorage.getItem("token");
       const resolveRes = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/paystack/resolve-account`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/wallet/resolve-account`,
         {
           params: { account_number: accNum, bank_code: bCode },
           headers: { Authorization: `Bearer ${token}` },
