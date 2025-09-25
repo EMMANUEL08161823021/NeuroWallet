@@ -21,8 +21,6 @@ export const AppProvider = ({ children }) => {
 
     try {
       const decoded = jwtDecode(token);
-      console.log("Decoded token:", decoded);
-      console.log("Email from token:", decoded.email); // ✅ correct
 
       setEmail(decoded.email)
 

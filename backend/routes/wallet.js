@@ -16,26 +16,13 @@ async function resolveAccount(account_number, bank_code) {
   const resp = await axios.get(url, {
     params,
     headers: {
-      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      Authorization: `Bearer ${process.env.VITE_PAYSTACK_SECRET_KEY}`,
     },
   });
 
   // resp.data.data.account_name contains the resolved name
   return resp.data;
 }
-
-
-// usage in a route
-router.get("/resolve-account", requireAuth, async (req, res) => {
-  try {
-    const { account_number, bank_code } = req.query;
-    const result = await resolveAccount(account_number, bank_code);
-    res.json({ success: true, data: result.data });
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).json({ success: false, error: err.response?.data || err.message });
-  }
-});
 
 // Get user wallet + transactions
 
@@ -126,7 +113,7 @@ router.post("/recipient", requireAuth, async (req, res) => {
     const response = await axios.post(
       "https://api.paystack.co/transferrecipient",
       { type: "nuban", name, account_number, bank_code, currency },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      { headers: { Authorization: `Bearer ${process.env.VITE_PAYSTACK_SECRET_KEY}` } }
     );
     // Save response.data.data.recipient_code in your DB linked to the user
     res.json({ success: true, recipient: response.data.data });
@@ -134,6 +121,21 @@ router.post("/recipient", requireAuth, async (req, res) => {
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
+
+
+
+// usage in a route
+router.get("/resolve-account", requireAuth, async (req, res) => {
+  try {
+    const { account_number, bank_code } = req.query;
+    const result = await resolveAccount(account_number, bank_code);
+    res.json({ success: true, data: result.data });
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ success: false, error: err.response?.data || err.message });
+  }
+});
+
 
 
 // POST /api/wallet/transfer
