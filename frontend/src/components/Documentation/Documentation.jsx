@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Logo from "../../../public/logo.png";
+import { Link } from "react-router-dom";
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("getting-started");
@@ -102,8 +103,12 @@ export default function DocsPage() {
       <header className="flex justify-between items-center px-4 sm:px-6 py-3 bg-white dark:bg-gray-900 shadow-md">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <img src={Logo} alt="Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
-          <h1 className="font-bold text-lg sm:text-xl text-blue-600">
+          <img
+            src={Logo}
+            alt="Logo"
+            className="h-8 w-8 sm:h-10 sm:w-10 dark:invert"
+          />
+          <h1 className="font-bold text-lg sm:text-xl text-blue-600 dark:text-blue-400">
             NeuroWallet
           </h1>
         </div>
@@ -113,17 +118,28 @@ export default function DocsPage() {
           <input
             type="search"
             placeholder="Search guides..."
-            className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500
+                       bg-white text-gray-900 placeholder-gray-400 border-gray-200
+                       dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 dark:border-gray-700"
+            aria-label="Search guides"
           />
-          <button className="px-4 py-2 border rounded-lg hover:bg-blue-600 hover:text-white transition">
-            Sign Up
-          </button>
+          <Link to={"/login"}>
+            <button
+              
+              className="px-4 py-2 border rounded-lg hover:bg-blue-600 hover:text-white transition
+                        bg-white text-gray-800 border-gray-300
+                        dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-blue-600"
+            >
+              Sign Up
+            </button>
+          </Link>
         </div>
 
         {/* Mobile Menu Button */}
         <button
           className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open menu"
         >
           <Menu className="h-6 w-6 text-gray-700 dark:text-gray-200" />
         </button>
@@ -131,21 +147,21 @@ export default function DocsPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar (Desktop) */}
-        <aside className="hidden md:block w-64 bg-gray-100 dark:bg-gray-800 p-6 overflow-y-auto border-r">
-          <h2 className="text-lg font-semibold mb-4">📖 User Guide</h2>
-          <nav className="space-y-2">
+        <aside className="hidden md:block w-64 bg-gray-100 dark:bg-gray-800 p-6 overflow-y-auto border-r border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">📖 User Guide</h2>
+          <nav className="space-y-2" aria-label="Documentation sections">
             {Object.keys(docs).map((key) => (
               <button
                 key={key}
                 onClick={() => setActiveSection(key)}
-                className={`flex items-center w-full px-3 py-2 rounded-lg transition text-sm ${
-                  activeSection === key
+                className={`flex items-center w-full px-3 py-2 rounded-lg transition text-sm text-left gap-2
+                  ${activeSection === key
                     ? "bg-blue-600 text-white shadow"
-                    : "hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
+                    : "text-gray-800 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700"
+                  }`}
               >
-                {docs[key].icon}
-                {docs[key].title}
+                <span className="flex-shrink-0">{docs[key].icon}</span>
+                <span className="truncate">{docs[key].title}</span>
               </button>
             ))}
           </nav>
@@ -162,12 +178,16 @@ export default function DocsPage() {
             {/* Drawer */}
             <aside className="w-64 bg-white dark:bg-gray-900 p-6 space-y-4 shadow-lg">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold">📖 User Guide</h2>
-                <button onClick={() => setMobileMenuOpen(false)}>
-                  <X className="h-6 w-6" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📖 User Guide</h2>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <X className="h-6 w-6 text-gray-700 dark:text-gray-200" />
                 </button>
               </div>
-              <nav className="space-y-2">
+              <nav className="space-y-2" aria-label="Mobile documentation sections">
                 {Object.keys(docs).map((key) => (
                   <button
                     key={key}
@@ -175,14 +195,14 @@ export default function DocsPage() {
                       setActiveSection(key);
                       setMobileMenuOpen(false);
                     }}
-                    className={`flex items-center w-full px-3 py-2 rounded-lg transition text-sm ${
-                      activeSection === key
+                    className={`flex items-center w-full px-3 py-2 rounded-lg transition text-sm gap-2
+                      ${activeSection === key
                         ? "bg-blue-600 text-white shadow"
-                        : "hover:bg-gray-200 dark:hover:bg-gray-700"
-                    }`}
+                        : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                      }`}
                   >
-                    {docs[key].icon}
-                    {docs[key].title}
+                    <span className="flex-shrink-0">{docs[key].icon}</span>
+                    <span className="truncate">{docs[key].title}</span>
                   </button>
                 ))}
               </nav>
@@ -193,10 +213,10 @@ export default function DocsPage() {
         {/* Main Content */}
         <main className="flex-1 p-4 sm:p-8 overflow-y-auto bg-gray-50 dark:bg-gray-900">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
-            <h1 className="text-xl sm:text-2xl font-bold mb-4 text-blue-600">
+            <h1 className="text-xl sm:text-2xl font-bold mb-4 text-blue-600 dark:text-blue-400">
               {docs[activeSection].title}
             </h1>
-            <div className="prose dark:prose-invert max-w-none">
+            <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100">
               {docs[activeSection].content}
             </div>
           </div>
