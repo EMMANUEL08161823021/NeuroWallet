@@ -419,121 +419,177 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   };
 
   return (
-    <div className="relative bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col gap-4 p-4">
+    <main className="min-h-screen bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col gap-4" aria-labelledby="sendMoneyTitle">
+      {/* <h1 id="sendMoneyTitle" className="sr-only">Send Money</h1> */}
+
       <div aria-live="polite" ref={liveRef} className="sr-only" />
 
-      <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm font-medium">
-        <span className="font-bold">Status:</span> {status}
+      {/* Status */}
+      <div className="w-full p-3 rounded-lg bg-black text-white text-lg font-semibold" role="status" aria-atomic="true">
+        Status: <span className="ml-2">{status}</span>
       </div>
 
-      <details className="text-xs text-gray-500 dark:text-gray-400">
-        <summary className="cursor-pointer">OCR Debug</summary>
-        <pre className="whitespace-pre-wrap">{ocrText || "—"}</pre>
-      </details>
+      {/* Content area */}
+      <div className="flex-1 flex flex-col gap-4">
+        {/* top controls: phone input or camera info */}
+        {mode === "internal" && (
+          <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <label htmlFor="toPhone" className="block text-lg font-semibold mb-2">Recipient phone</label>
+            <div className="flex gap-2">
+              <input
+                id="toPhone"
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+2348012345678"
+                className="flex-1 p-3 text-lg rounded border focus:ring-4"
+                aria-describedby="phoneHelp"
+              />
+              <button onClick={lookupInternalRecipient} className="px-4 py-3 rounded-lg bg-gray-800 text-white font-semibold" aria-label="Find recipient">Find</button>
+            </div>
+            <p id="phoneHelp" className="mt-2 text-base">{recipientNameInternal ? <>Found: <strong>{recipientNameInternal}</strong></> : "Tip: Use numbers only or use the Speak option."}</p>
+          </section>
+        )}
 
-      {/* Mode switch */}
-      <div className="flex gap-2">
-        <button
-          className={`flex-1 py-2 rounded ${mode === "external" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          onClick={() => setMode("external")}
-        >
-          External (Bank via Camera)
-        </button>
-        <button
-          className={`flex-1 py-2 rounded ${mode === "internal" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          onClick={() => setMode("internal")}
-        >
-          Internal (Email)
-        </button>
-      </div>
+        {mode === "external" && (
+          <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold mb-2">External transfer (camera)</h2>
+            <div className="flex gap-2">
+              <button onClick={startCamera} className="flex-1 py-3 rounded-lg bg-indigo-600 text-white font-semibold" aria-label="Open camera">Open Camera</button>
+            </div>
 
-      {mode === "external" && stage !== "camera" && (
-        <div className="space-y-2 text-sm">
-          <p className="text-sm text-gray-600">Use camera to capture account details (bank + account number)</p>
-          <button onClick={startCamera} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg">Open Camera</button>
-        </div>
-      )}
+            {stage === "camera" && (
+              <div className="mt-3">
+                <div className="rounded overflow-hidden border" aria-hidden>
+                  <Webcam
+                    audio={false}
+                    ref={webcamRef}
+                    screenshotFormat="image/png"
+                    videoConstraints={{ facingMode: "environment" }}
+                    className="w-full h-56 object-cover"
+                  />
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button onClick={snapAndOcr} className="flex-1 py-3 rounded-lg bg-indigo-700 text-white font-semibold">Snap</button>
+                  <button onClick={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }} className="flex-1 py-3 rounded-lg bg-gray-300 text-black">Cancel</button>
+                </div>
+              </div>
+            )}
 
-      {mode === "camera" && stage === "camera" && (
-        <div className="space-y-4">
-          <Webcam audio={false} ref={webcamRef} screenshotFormat="image/png" videoConstraints={{ facingMode: "environment" }} className="rounded-lg w-full h-60 object-cover" />
-          <div className="flex gap-3">
-            <button onClick={snapAndOcr} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg">Snap</button>
-            <button onClick={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }} className="flex-1 bg-gray-200 dark:bg-gray-700 py-3 rounded-lg">Cancel</button>
-          </div>
-        </div>
-      )}
+            {stage !== "camera" && (
+              <div className="mt-3 text-base">
+                <p>Bank: <strong>{bankName || "Not found"}</strong></p>
+                <p>Account: <strong>{accountNumber || "Not found"}</strong></p>
+                <p>Name: <strong>{resolvedName || "Not Found"}</strong></p>
+              </div>
+            )}
+          </section>
+        )}
 
-      {mode === "internal" && (
-        <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-3 rounded">
-          <label className="text-sm font-medium">Recipient Email</label>
+        {/* amount area (shared) */}
+        <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <label className="block text-lg font-semibold mb-2">Amount</label>
           <div className="flex gap-2">
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="flex-1 p-2 border rounded" placeholder="+2347031288633" />
-            <button onClick={lookupInternalRecipient} className="px-3 py-2 rounded bg-gray-200">Find</button>
+            <button onClick={listenForAmount} className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold" aria-label="Speak amount">🎤 Speak</button>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Amount (NGN)"
+              className="w-44 p-3 text-lg rounded border focus:ring-4"
+              aria-label="Amount in naira"
+            />
           </div>
-          {recipientNameInternal && <p className="text-sm">Found: <strong>{recipientNameInternal}</strong></p>}
-        </div>
-      )}
+          <div className="mt-2 text-lg">Amount: <strong>₦{amount || "—"}</strong></div>
+        </section>
 
-      {mode === "external" && (
-        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Make External Transfer</h2>
-          <p>Bank: <span className="font-medium">{bankName || "Not found"}</span></p>
-          <p>Bank code: <span className="font-medium">{bankCode || "Not mapped"}</span></p>
-          <p>Account: <span className="font-medium">{accountNumber || "Not found"}</span></p>
-          <p>Name: <span className="font-medium">{resolvedName || "Checking..."}</span></p>
-        </div>
-      )}
+        {/* confirm summary */}
+        {stage === "confirm" && (
+          <section role="region" aria-label="Confirm transfer" className="bg-white border-2 border-yellow-400 p-4 rounded-lg">
+            <h3 className="text-xl font-bold mb-2">Confirm</h3>
 
-      {/* Shared amount input + voice */}
-      <div className="space-y-2">
-        <p className="text-sm text-gray-500">Or speak amount</p>
-        <div className="flex gap-2">
-          <button onClick={listenForAmount} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">Speak Amount</button>
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (NGN)" className="w-40 p-2 border rounded" />
-        </div>
-        <div className="text-sm text-gray-500">Amount: ₦{amount || "—"}</div>
+            {mode === "internal" ? (
+              <>
+                <p className="text-lg">Recipient phone: <strong>{phone}</strong></p>
+                <p className="text-lg">Name: <strong>{recipientNameInternal || "—"}</strong></p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg">Bank: <strong>{bankName}</strong></p>
+                <p className="text-lg">Account: <strong>{accountNumber}</strong></p>
+                <p className="text-lg">Name: <strong>{resolvedName}</strong></p>
+              </>
+            )}
+
+            <p className="text-lg mt-2">Amount: <strong>₦{amount}</strong></p>
+            <p className="mt-3 text-base">Hold the button below to authenticate and send.</p>
+          </section>
+        )}
+
+        {/* processing / done */}
+        {stage === "sending" && <div className="p-4 rounded-lg bg-gray-100 text-center text-lg">Processing transfer...</div>}
+
+        {stage === "done" && (
+          <div className="p-4 rounded-lg bg-green-50 text-center">
+            <p className="text-2xl font-bold text-green-700">{status}</p>
+            <button onClick={() => {
+              setStage("idle");
+              setStatus("Ready");
+              setAccountNumber("");
+              setBankName("");
+              setAmount("");
+              setResolvedName("");
+              setRecipientCode("");
+              setPhone("");
+              setRecipientNameInternal("");
+            }} className="mt-3 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold">Done</button>
+          </div>
+        )}
       </div>
 
-      {stage === "confirm" && (
-        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-md">
-          <h2 className="font-semibold mb-2">Confirm Transfer</h2>
+      {/* Bottom control row: Internal left | Fingerprint center | External right */}
+      <div className="fixed bottom-4 left-0 w-full flex items-center justify-center px-4">
+        <div className="max-w-4xl flex items-center justify-between gap-4">
 
-          {mode === "internal" ? (
-            <>
-              <p>Recipient: <span className="font-medium">{phone}</span></p>
-              <p>Name: <span className="font-medium">{recipientNameInternal || "—"}</span></p>
-            </>
-          ) : (
-            <>
-              <p>Bank: <span className="font-medium">{bankName}</span></p>
-              <p>Account: <span className="font-medium">{accountNumber}</span></p>
-              <p>Name: <span className="font-medium">{resolvedName}</span></p>
-            </>
-          )}
+          {/* Internal button (left) */}
+          <button
+            onClick={() => { setMode("internal"); speak("Internal transfer selected"); }}
+            className="w-25 h-25 rounded-full bg-yellow-500 text-black text-lg font-semibold focus:outline-none focus:ring-4"
+            aria-label="Select internal transfer"
+          >
+            Internal
+          </button>
 
-          <p>Amount: <span className="font-medium">₦{amount}</span></p>
-          <p className="mt-3 text-sm text-gray-600">Hold the fingerprint button to authenticate and send.</p>
+          {/* Fingerprint / confirm (center) */}
+          <div className="flex-shrink-0 mx-2">
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Hold to confirm transfer. Press and hold Space or Enter as alternative."
+              onMouseDown={handlePressStart}
+              onMouseUp={handlePressEnd}
+              onTouchStart={handlePressStart}
+              onTouchEnd={handlePressEnd}
+              onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") handlePressStart(); }}
+              onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") handlePressEnd(); }}
+              className="w-36 h-36 rounded-full bg-blue-700 flex items-center justify-center text-white shadow-2xl select-none focus:outline-none focus:ring-8"
+            >
+              <Fingerprint size={56} strokeWidth={1.5} />
+            </div>
+          </div>
+
+          {/* External button (right) */}
+          <button
+            onClick={() => { setMode("external"); speak("External transfer selected"); }}
+            className="w-25 h-25 rounded-full bg-indigo-600 text-white text-lg font-semibold focus:outline-none focus:ring-4"
+            aria-label="Select external transfer"
+          >
+            External
+          </button>
         </div>
-      )}
-
-      {stage === "sending" && <div className="text-center">Processing transfer...</div>}
-      {stage === "done" && (
-        <div className="text-center">
-          <p className="font-semibold text-green-600">{status}</p>
-          <button onClick={() => {
-            setStage("idle"); setStatus("Ready"); setAccountNumber(""); setBankName(""); setAmount(""); setResolvedName(""); setRecipientCode(""); setToEmail(""); setRecipientNameInternal("");
-          }} className="w-full bg-blue-600 text-white py-3 rounded-lg mt-3">Done</button>
-        </div>
-      )}
-
-      {/* Fingerprint Button */}
-      <div className="fixed w-full bottom-4 left-0 flex flex-col items-center gap-1">
-        <div role="button" tabIndex={0} aria-label="Hold to confirm transfer" onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onTouchStart={handlePressStart} onTouchEnd={handlePressEnd} className="w-40 h-40 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-2xl select-none">
-          <Fingerprint size={80} strokeWidth={1.5} />
-        </div>
-        <div className="mt-2 text-base font-medium text-center">{status}</div>
       </div>
-    </div>
+    </main>
   );
+
 }

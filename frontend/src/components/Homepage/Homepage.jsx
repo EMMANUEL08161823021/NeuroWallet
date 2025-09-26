@@ -196,8 +196,8 @@ const Homepage = () => {
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen">
-      <div className="p-6 rounded-lg h-screen shadow-md max-w-lg mx-auto border-2 border-black">
+    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+      <div className="p-6 rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">
         <div className="flex py-2 justify-between">
           <h2>Dashboard</h2>
           <h3>Wallet Balance: ₦{balance}</h3>

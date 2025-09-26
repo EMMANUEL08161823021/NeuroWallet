@@ -271,14 +271,12 @@ router.post("/internal-transfer", requireAuth, async (req, res) => {
     const fromUserId = req.user.sub;
     const { phone, amount } = req.body;
 
-    // Basic validation
     if (!phone || !amount || Number(amount) <= 0) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ success: false, msg: "Invalid input" });
     }
 
-    // Normalize phone to E.164 (default country Nigeria)
     const normalized = normalizePhone(phone, "NG");
     if (!normalized) {
       await session.abortTransaction();
@@ -286,10 +284,10 @@ router.post("/internal-transfer", requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, msg: "Invalid phone number format" });
     }
 
-    // Amount handling: keep using NGN decimals consistent with your schema
-    const amt = Math.round(Number(amount) * 100) / 100; // two-decimal rounding
+    // NOTE: decide if you store amounts in minor units. Here we use decimals as schema expects Number.
+    const amt = Math.round(Number(amount) * 100) / 100;
 
-    // Find recipient by phone
+    // find recipient
     const toUser = await User.findOne({ phone: normalized }).session(session);
     if (!toUser) {
       await session.abortTransaction();
@@ -297,14 +295,14 @@ router.post("/internal-transfer", requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, msg: "Recipient not found" });
     }
 
-    // Prevent self-transfer
+    // prevent self-transfer
     if (toUser._id.equals(fromUserId)) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
     }
 
-    // Decrement sender only if they have enough balance
+    // decrement sender atomically only if they have enough balance
     const sender = await User.findOneAndUpdate(
       { _id: fromUserId, "wallet.balance": { $gte: amt } },
       { $inc: { "wallet.balance": -amt } },
@@ -317,39 +315,66 @@ router.post("/internal-transfer", requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, msg: "Insufficient balance" });
     }
 
-    // Credit recipient
+    // credit recipient
     await User.updateOne(
       { _id: toUser._id },
       { $inc: { "wallet.balance": amt } },
       { session }
     );
 
-    // Log transaction — match your Transaction schema fields
-    const txRef = `int_${uuidv4()}`;
-    const txDoc = {
-      ref: txRef,            // schema expected field
-      accountId: fromUserId, // schema expected field
-      type: "internal",      // must match enum in schema
+    // create transaction documents (DEBIT for sender, CREDIT for recipient)
+    const refBase = uuidv4();
+    const debitRef = `INT-DEBIT-${refBase}`;
+    const creditRef = `INT-CREDIT-${refBase}`;
+
+    const timestamp = new Date();
+
+    const debitDoc = {
+      ref: debitRef,
+      accountId: fromUserId,         // your schema expects accountId
+      type: "DEBIT",                 // matches enum
       amount: amt,
-      from: fromUserId,
-      to: toUser._id,
-      status: "success",
-      createdAt: new Date()
+      memo: `Internal transfer to ${normalized}`,
+      counterparty: normalized,
+      currency: "NGN",
+      meta: { toUserId: toUser._id.toString(), initiatedBy: fromUserId.toString() },
+      createdAt: timestamp,
     };
 
-    const tx = await Transaction.create([txDoc], { session });
+    const creditDoc = {
+      ref: creditRef,
+      accountId: toUser._id,
+      type: "CREDIT",
+      amount: amt,
+      memo: `Internal transfer from ${sender.email || sender.phone || fromUserId}`,
+      counterparty: sender.phone || sender.email || fromUserId,
+      currency: "NGN",
+      meta: { fromUserId: fromUserId.toString(), initiatedBy: fromUserId.toString() },
+      createdAt: timestamp,
+    };
+
+    const [debitTx, creditTx] = await Transaction.create([debitDoc, creditDoc], { session, ordered: true } );
 
     await session.commitTransaction();
     session.endSession();
 
-    return res.json({ success: true, reference: txRef, tx: tx[0] });
+    return res.json({
+      success: true,
+      message: "Internal transfer successful",
+      debitTx,
+      creditTx,
+      newSenderBalance: sender.wallet.balance, // updated sender balance
+    });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+
+    // If you removed funds but failed later, ensure you reconcile / re-credit if necessary.
     console.error("Internal transfer error:", err);
     return res.status(500).json({ success: false, message: err.message || "Server error" });
   }
 });
+
 
 
 
