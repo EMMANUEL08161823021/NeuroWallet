@@ -184,6 +184,17 @@ const Homepage = () => {
     }
   };
 
+  // client call to perform internal transfer
+  async function sendInternal(toEmail, amount) {
+    const token = localStorage.getItem("token");
+    const res = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/wallet/transfer/internal`,
+      { toEmail, amount },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  }
+
   return (
     <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen">
       <div className="p-6 rounded-lg h-screen shadow-md max-w-lg mx-auto border-2 border-black">

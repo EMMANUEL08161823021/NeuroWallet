@@ -55,6 +55,36 @@ exports.completeProfile = async (req, res, next) => {
   }
 };
 
+exports.checkUser = async (req, res) => {
+  try {
+    const { phone, q } = req.query;
+
+    // prefer exact phone search if provided
+    if (phone) {
+      const user = await User.findOne({ phone: phone.trim() })
+        .select("name phone")
+        .lean();
+      if (!user) return res.status(404).json({ success: false, message: "User not found" });
+      return res.json({ success: true, user });
+    }
+
+    // fallback: simple free-text search (q) for name or phone (only when q >= 3 chars)
+    if (q && q.trim().length >= 3) {
+      const regex = new RegExp(q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      const user = await User.findOne({ $or: [{ name: regex }, { phone: regex }] })
+        .select("name phone")
+        .lean();
+      if (!user) return res.status(404).json({ success: false, message: "User not found" });
+      return res.json({ success: true, user });
+    }
+
+    return res.status(400).json({ success: false, message: "Provide `phone` or `q` (>=3 chars)" });
+  } catch (err) {
+    console.error("User lookup error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 
 
 

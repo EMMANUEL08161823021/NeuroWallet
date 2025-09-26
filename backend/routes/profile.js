@@ -8,4 +8,7 @@ const { requireAuth } = require("../middleware/auth");
 router.post("/complete-profile", requireAuth, profileController.completeProfile);
 
 
+router.get("/lookup", requireAuth, profileController.checkUser);
+
+
 module.exports = router;

@@ -2,9 +2,11 @@ const express = require("express");
 const axios = require("axios");
 const User = require("../models/NewUser");
 const jwt = require("jsonwebtoken");
-
+const { v4: uuidv4 } = require("uuid");
 const { requireAuth } = require("../middleware/auth");
-
+const mongoose = require("mongoose")
+const Transaction = require("../models/Transaction");
+const { parsePhoneNumberFromString } = require("libphonenumber-js");
 const router = express.Router();
 
 
@@ -22,6 +24,18 @@ async function resolveAccount(account_number, bank_code) {
 
   // resp.data.data.account_name contains the resolved name
   return resp.data;
+}
+
+// Normalize and validate phone to E.164
+function normalizePhone(rawPhone, defaultCountry = "NG") {
+  if (!rawPhone) return null;
+  try {
+    const pn = parsePhoneNumberFromString(String(rawPhone), defaultCountry);
+    if (!pn || !pn.isValid()) return null;
+    return pn.number; // e.g. +2348012345678
+  } catch {
+    return null;
+  }
 }
 
 // Get user wallet + transactions
@@ -246,6 +260,96 @@ router.get("/verify/:reference", requireAuth, async (req, res) => {
   }
 });
 
+
+// POST /api/wallet/transfer/internal
+// body: { toPhone, amount }
+// requireAuth populates req.user.sub
+router.post("/internal-transfer", requireAuth, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const fromUserId = req.user.sub;
+    const { phone, amount } = req.body;
+
+    // Basic validation
+    if (!phone || !amount || Number(amount) <= 0) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, msg: "Invalid input" });
+    }
+
+    // Normalize phone to E.164 (default country Nigeria)
+    const normalized = normalizePhone(phone, "NG");
+    if (!normalized) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, msg: "Invalid phone number format" });
+    }
+
+    // Amount handling: keep using NGN decimals consistent with your schema
+    const amt = Math.round(Number(amount) * 100) / 100; // two-decimal rounding
+
+    // Find recipient by phone
+    const toUser = await User.findOne({ phone: normalized }).session(session);
+    if (!toUser) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, msg: "Recipient not found" });
+    }
+
+    // Prevent self-transfer
+    if (toUser._id.equals(fromUserId)) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
+    }
+
+    // Decrement sender only if they have enough balance
+    const sender = await User.findOneAndUpdate(
+      { _id: fromUserId, "wallet.balance": { $gte: amt } },
+      { $inc: { "wallet.balance": -amt } },
+      { new: true, session }
+    );
+
+    if (!sender) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, msg: "Insufficient balance" });
+    }
+
+    // Credit recipient
+    await User.updateOne(
+      { _id: toUser._id },
+      { $inc: { "wallet.balance": amt } },
+      { session }
+    );
+
+    // Log transaction — match your Transaction schema fields
+    const txRef = `int_${uuidv4()}`;
+    const txDoc = {
+      ref: txRef,            // schema expected field
+      accountId: fromUserId, // schema expected field
+      type: "internal",      // must match enum in schema
+      amount: amt,
+      from: fromUserId,
+      to: toUser._id,
+      status: "success",
+      createdAt: new Date()
+    };
+
+    const tx = await Transaction.create([txDoc], { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.json({ success: true, reference: txRef, tx: tx[0] });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Internal transfer error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Server error" });
+  }
+});
 
 
 

@@ -14,7 +14,6 @@ function bufToB64Url(buf) {
   for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
-
 // Convert base64url → ArrayBuffer
 function b64UrlToBuf(b64url) {
   if (!b64url) return null;
@@ -42,7 +41,7 @@ function parseAmountFromSpeech(transcript) {
   return null;
 }
 
-// Small mapping of common bank name matches -> bank code (Nigerian NUBAN codes)
+// Small mapping of common bank name matches -> bank code (NIGERIAN)
 const BANK_NAME_TO_CODE = {
   gtbank: "058",
   gtb: "058",
@@ -67,8 +66,10 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const webcamRef = useRef(null);
   const liveRef = useRef(null);
   const pressStartTime = useRef(null);
+  const mounted = useRef(true);
 
-  const [stage, setStage] = useState("idle"); // idle | camera | amount | confirm | sending | done
+  // stages: idle | camera | amount | confirm | sending | done
+  const [stage, setStage] = useState("idle");
   const [ocrText, setOcrText] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
@@ -80,8 +81,18 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const [loadingResolve, setLoadingResolve] = useState(false);
   const [loadingRecipient, setLoadingRecipient] = useState(false);
 
-  const { user } = useApp(); // if you store email in user object
+  // Internal transfer fields
+  const [mode, setMode] = useState("external"); // "external" (bank) | "internal" (email)
+  const [phone, setPhone] = useState("");
+  const [recipientNameInternal, setRecipientNameInternal] = useState("");
+
+  const { user } = useApp();
   const email = user?.email;
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (liveRef.current) liveRef.current.textContent = status;
@@ -110,10 +121,10 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     try {
       const { data } = await Tesseract.recognize(image, "eng");
       const text = data?.text || "";
+      if (!mounted.current) return;
       setOcrText(text);
 
-      // Try to extract account number and bank name heuristically
-      const accMatch = text.match(/\b\d{9,12}\b/); // common account lengths
+      const accMatch = text.match(/\b\d{9,12}\b/);
       const bankMatch = text.match(/\b(Access|GTB|GTBank|UBA|Zenith|First\s+Bank|Union|Fidelity|Ecobank|Polaris|Sterling|FCMB|Wema|Stanbic|GTBank)\b/i);
 
       if (!accMatch || !bankMatch) {
@@ -125,10 +136,10 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
       const acc = accMatch[0].trim();
       const bankRaw = bankMatch[0].trim();
+      if (!mounted.current) return;
       setAccountNumber(acc);
       setBankName(bankRaw);
 
-      // Try to map to bank code
       const mapped = mapBankNameToCode(bankRaw);
       setBankCode(mapped || "");
       if (!mapped) {
@@ -138,16 +149,16 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         return;
       }
 
-      // Resolve account name from server (which calls Paystack)
+      // Resolve + create recipient (external flow)
       await resolveAccountAndCreateRecipient(acc, mapped);
     } catch (err) {
       console.error(err);
+      if (!mounted.current) return;
       setStatus("OCR failed. Try again.");
       speak("Scanning failed. Please try again.");
     }
   };
 
-  // Map OCR bank name to code (best-effort)
   function mapBankNameToCode(rawName) {
     if (!rawName) return null;
     const key = rawName.toString().toLowerCase().replace(/\./g, "").replace(/\s+/g, "");
@@ -159,46 +170,80 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     setLoadingResolve(true);
     setStatus("Resolving account...");
     try {
-      // 1) Resolve account name
       const token = localStorage.getItem("token");
       const resolveRes = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/resolve-account`,
         {
           params: { account_number: accNum, bank_code: bCode },
           headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000
         }
       );
 
+      if (!mounted.current) return;
       const account_name = resolveRes.data.data?.account_name || "";
       setResolvedName(account_name);
       setStatus(`Account resolved: ${account_name}`);
       speak(`Account resolved: ${account_name}`);
 
-      // 2) Create recipient (so you have recipient_code for transfers)
+      // Create recipient
       setLoadingRecipient(true);
       const createRes = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/recipient`,
         { name: account_name, account_number: accNum, bank_code: bCode },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
       );
 
-      const r = createRes.data.recipient || createRes.data.data; // depending on your backend shape
-      setRecipientCode(r.recipient_code || r.recipientCode || r.recipient);
+      if (!mounted.current) return;
+      const r = createRes.data.recipient || createRes.data.data || createRes.data;
+      const code = r.recipient_code || r.recipientCode || r.recipient || r.code || r.recipient_code;
+      setRecipientCode(code);
       setStatus("Recipient created. Ready to set amount.");
       setStage("amount");
       speak("Recipient created. How much would you like to send?");
     } catch (err) {
-      console.error("Resolve/create recipient error:", err.response?.data || err.message);
+      console.error("Resolve/create recipient error:", err?.response?.data || err.message);
+      if (!mounted.current) return;
       setStatus("Could not resolve or create recipient. Please verify details.");
       speak("Could not resolve or create recipient. Please verify details or try again.");
       setStage("amount");
     } finally {
-      setLoadingResolve(false);
-      setLoadingRecipient(false);
+      if (mounted.current) {
+        setLoadingResolve(false);
+        setLoadingRecipient(false);
+      }
     }
   }
 
-  // Listen for spoken amount
+  // Internal recipient lookup by email (optional helper)
+  const lookupInternalRecipient = async () => {
+    if (!phone) {
+      setStatus("Please enter recipient phone number to lookup.");
+      return;
+    }
+    setStatus("Looking up recipient...");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user/lookup`, {
+        params: { phone: phone },
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 8000
+      });
+      if (!mounted.current) return;
+      const userData = res.data.user || res.data.data || res.data;
+      setRecipientNameInternal(userData?.name || userData?.fullName || "");
+      setStatus("Recipient found.");
+      speak("Recipient found");
+    } catch (err) {
+      console.warn("Lookup failed:", err?.response?.data || err.message);
+      if (!mounted.current) return;
+      setRecipientNameInternal("");
+      setStatus("Recipient not found. You can still proceed — backend will validate.");
+      speak("Recipient not found. You can still proceed.");
+    }
+  };
+
+  // Listen for spoken amount (shared)
   const listenForAmount = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -218,6 +263,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     };
 
     recognition.onresult = (ev) => {
+      if (!mounted.current) return;
       const transcript = ev.results[0][0].transcript;
       const parsed = parseAmountFromSpeech(transcript);
       if (parsed && !isNaN(parsed)) {
@@ -225,7 +271,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         setStatus(`Amount set to ₦${parsed}`);
         speak(`Amount set to ${parsed} naira`);
         setStage("confirm");
-        speak(`You are sending naira ${parsed} to ${resolvedName || accountNumber}. Press and hold to confirm.`);
+        speak(`You are sending naira ${parsed} to ${mode === "internal" ? toEmail || recipientNameInternal || "recipient" : resolvedName || accountNumber}. Press and hold to confirm.`);
       } else {
         setStatus("Could not understand amount. Please try again.");
         speak("Could not understand the amount. Please try again.");
@@ -233,6 +279,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     };
 
     recognition.onerror = () => {
+      if (!mounted.current) return;
       setStatus("Voice recognition error");
       speak("Voice recognition error. Please try again.");
     };
@@ -240,29 +287,48 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     recognition.start();
   };
 
-  // Transfer action (assumes recipientCode is ready)
-  const handleTransfer = async () => {
+  // Transfer action (branch internal vs external)
+  const doInternalTransfer = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("No auth token");
-
-      setStatus("Initiating transfer...");
+      setStatus("Initiating internal transfer...");
       setStage("sending");
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/wallet/internal-transfer`,
+        { phone, amount: Number(amount) },
+        { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+      );
+      if (!mounted.current) return;
+      setStatus(res.data?.message || "Internal transfer successful");
+      speak("Transfer successful");
+      setStage("done");
+    } catch (err) {
+      console.error("Internal transfer error:", err?.response?.data || err.message);
+      if (!mounted.current) return;
+      const message = err?.response?.data?.msg || err?.response?.data?.message || err?.message || "Transfer failed";
+      setStatus("❌ " + message);
+      speak("Transfer failed");
+      setStage("confirm");
+    }
+  };
 
+  const doExternalTransfer = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      setStatus("Initiating external transfer...");
+      setStage("sending");
       const res = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/transfer`,
         { recipient_code: recipientCode, amount: Number(amount) },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
       );
-
-      console.log("res:", res);
-      
-
+      if (!mounted.current) return;
       setStatus("✅ Transfer initiated");
       speak("Transfer initiated. We will notify you when it completes.");
       setStage("done");
     } catch (err) {
-      console.error("Transfer error:", err.response?.data || err.message);
+      console.error("Transfer error:", err?.response?.data || err.message);
+      if (!mounted.current) return;
       setStatus("❌ Transfer failed");
       speak("Transfer failed. Please try again.");
       setStage("confirm");
@@ -285,7 +351,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       return;
     }
 
-    // Long press → WebAuthn authentication then transfer
+    // Long press → WebAuthn authentication then do transfer (internal or external)
     await authenticateAndTransfer();
   };
 
@@ -293,15 +359,13 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     try {
       setStatus("Authenticating...");
       const token = localStorage.getItem("token");
-      // 1) get options
       const optRes = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
         { email },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
       );
+
       const options = optRes.data;
-      // If your backend wraps with .data that's fine: adjust accordingly
-      // convert challenge & allowCredentials
       options.challenge = b64UrlToBuf(options.challenge);
       options.allowCredentials = (options.allowCredentials || []).map((cred) => ({
         ...cred,
@@ -322,28 +386,33 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         type: assertion.type,
       };
 
-      // verify
       const verifyRes = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/verify-authentication`,
         { email, assertionResponse: authResponse },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
       );
 
       if (!verifyRes.data.verified || !verifyRes.data.token) {
+        if (!mounted.current) return;
         setStatus("❌ Authentication failed");
         speak("Authentication failed");
         return;
       }
 
-      // store token (if backend returned refreshed token)
       if (verifyRes.data.token) localStorage.setItem("token", verifyRes.data.token);
+      if (!mounted.current) return;
       setStatus("✅ Authenticated. Proceeding with transfer...");
       speak("Authenticated. Proceeding with transfer.");
 
-      // finally call transfer
-      await handleTransfer();
+      // Branch
+      if (mode === "internal") {
+        await doInternalTransfer();
+      } else {
+        await doExternalTransfer();
+      }
     } catch (err) {
-      console.error("Auth/transfer error:", err.response?.data || err.message);
+      console.error("Auth/transfer error:", err?.response?.data || err.message);
+      if (!mounted.current) return;
       setStatus("❌ Authentication error: " + (err.message || "unknown"));
       speak("Authentication error. Please try again.");
     }
@@ -362,16 +431,30 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         <pre className="whitespace-pre-wrap">{ocrText || "—"}</pre>
       </details>
 
-      {stage === "idle" && (
-        <div className="space-y-4 text-center">
-          <p className="text-gray-600 dark:text-gray-300">Tap the button to start sending money.</p>
-          <button onClick={startCamera} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg">
-            Send Money
-          </button>
+      {/* Mode switch */}
+      <div className="flex gap-2">
+        <button
+          className={`flex-1 py-2 rounded ${mode === "external" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          onClick={() => setMode("external")}
+        >
+          External (Bank via Camera)
+        </button>
+        <button
+          className={`flex-1 py-2 rounded ${mode === "internal" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          onClick={() => setMode("internal")}
+        >
+          Internal (Email)
+        </button>
+      </div>
+
+      {mode === "external" && stage !== "camera" && (
+        <div className="space-y-2 text-sm">
+          <p className="text-sm text-gray-600">Use camera to capture account details (bank + account number)</p>
+          <button onClick={startCamera} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg">Open Camera</button>
         </div>
       )}
 
-      {stage === "camera" && (
+      {mode === "camera" && stage === "camera" && (
         <div className="space-y-4">
           <Webcam audio={false} ref={webcamRef} screenshotFormat="image/png" videoConstraints={{ facingMode: "environment" }} className="rounded-lg w-full h-60 object-cover" />
           <div className="flex gap-3">
@@ -381,37 +464,56 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         </div>
       )}
 
-      {stage === "amount" && (
-        <div className="space-y-4">
-          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold mb-2">Make Transfer</h2>
-            <p><strong>Detected:</strong></p>
-            <p>Bank: <span className="font-medium">{bankName || "Not found"}</span></p>
-            <p>Bank code: <span className="font-medium">{bankCode || "Not mapped"}</span></p>
-            <p>Account: <span className="font-medium">{accountNumber || "Not found"}</span></p>
-            <p>Name: <span className="font-medium">{resolvedName || "Checking..."}</span></p>
+      {mode === "internal" && (
+        <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-3 rounded">
+          <label className="text-sm font-medium">Recipient Email</label>
+          <div className="flex gap-2">
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="flex-1 p-2 border rounded" placeholder="+2347031288633" />
+            <button onClick={lookupInternalRecipient} className="px-3 py-2 rounded bg-gray-200">Find</button>
           </div>
-
-          <p className="text-sm text-gray-500">Or speak amount</p>
-          <button onClick={listenForAmount} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg">Speak Amount</button>
-
-          <div>
-            <label className="block text-sm">Or type amount</label>
-            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (NGN)" className="w-full p-2 border rounded-lg mt-1" />
-            <button onClick={() => setStage("confirm")} disabled={!amount} className="mt-2 w-full bg-blue-600 text-white py-2 rounded-lg">Continue</button>
-          </div>
+          {recipientNameInternal && <p className="text-sm">Found: <strong>{recipientNameInternal}</strong></p>}
         </div>
       )}
 
+      {mode === "external" && (
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Make External Transfer</h2>
+          <p>Bank: <span className="font-medium">{bankName || "Not found"}</span></p>
+          <p>Bank code: <span className="font-medium">{bankCode || "Not mapped"}</span></p>
+          <p>Account: <span className="font-medium">{accountNumber || "Not found"}</span></p>
+          <p>Name: <span className="font-medium">{resolvedName || "Checking..."}</span></p>
+        </div>
+      )}
+
+      {/* Shared amount input + voice */}
+      <div className="space-y-2">
+        <p className="text-sm text-gray-500">Or speak amount</p>
+        <div className="flex gap-2">
+          <button onClick={listenForAmount} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">Speak Amount</button>
+          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (NGN)" className="w-40 p-2 border rounded" />
+        </div>
+        <div className="text-sm text-gray-500">Amount: ₦{amount || "—"}</div>
+      </div>
+
       {stage === "confirm" && (
-        <div>
-          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-md">
-            <h2 className="font-semibold mb-2">Confirm Transfer</h2>
-            <p>Bank: <span className="font-medium">{bankName}</span></p>
-            <p>Account: <span className="font-medium">{accountNumber}</span></p>
-            <p>Name: <span className="font-medium">{resolvedName}</span></p>
-            <p>Amount: <span className="font-medium">₦{amount}</span></p>
-          </div>
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+          <h2 className="font-semibold mb-2">Confirm Transfer</h2>
+
+          {mode === "internal" ? (
+            <>
+              <p>Recipient: <span className="font-medium">{phone}</span></p>
+              <p>Name: <span className="font-medium">{recipientNameInternal || "—"}</span></p>
+            </>
+          ) : (
+            <>
+              <p>Bank: <span className="font-medium">{bankName}</span></p>
+              <p>Account: <span className="font-medium">{accountNumber}</span></p>
+              <p>Name: <span className="font-medium">{resolvedName}</span></p>
+            </>
+          )}
+
+          <p>Amount: <span className="font-medium">₦{amount}</span></p>
+          <p className="mt-3 text-sm text-gray-600">Hold the fingerprint button to authenticate and send.</p>
         </div>
       )}
 
@@ -419,7 +521,9 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       {stage === "done" && (
         <div className="text-center">
           <p className="font-semibold text-green-600">{status}</p>
-          <button onClick={() => { setStage("idle"); setStatus("Ready"); setAccountNumber(""); setBankName(""); setAmount(""); setResolvedName(""); setRecipientCode(""); }} className="w-full bg-blue-600 text-white py-3 rounded-lg mt-3">Done</button>
+          <button onClick={() => {
+            setStage("idle"); setStatus("Ready"); setAccountNumber(""); setBankName(""); setAmount(""); setResolvedName(""); setRecipientCode(""); setToEmail(""); setRecipientNameInternal("");
+          }} className="w-full bg-blue-600 text-white py-3 rounded-lg mt-3">Done</button>
         </div>
       )}
 
