@@ -5,8 +5,9 @@ const User = require("../models/NewUser");
 const { signAccess } = require("../utils/jwt");
 const { sendEmail } = require("../utils/mailer");
 const nodemailer = require("nodemailer");
-
 const MAGIC_TTL_MIN = 10;
+const expiresMin = MAGIC_TTL_MIN || 15;
+
 
 // POST /api/auth/magic-link
 async function requestMagicLink(req, res, next) {
@@ -30,19 +31,114 @@ async function requestMagicLink(req, res, next) {
     });
 
     if (user) {
+      // const url = new URL("http://localhost:9000/api/auth/magic/verify");
       const url = new URL(`${process.env.APP_URL}/api/auth/magic/verify`);
       url.searchParams.set("token", rawToken);
       if (clientNonce) url.searchParams.set("nonce", clientNonce);
       url.searchParams.set("redirect", "/dashboard");
 
+      // You can adjust APP_ORIGIN or ASSET_URL to where your logo is hosted
+      // const APP_ORIGIN = process.env.APP_URL?.replace(/\/$/, "") || `https://${process.env.DOMAIN || "your-domain.com"}`;
+
+      const rawName = user?.name ? user.name : "";
+      const verifyUrl = url.toString();
+      
+
       const info = await sendEmail({
         to: email,
-        subject: "Your NeuroWallet sign-in link",
+        subject: "🔐 Your NeuroWallet sign-in link",
+        // Plain-text fallback (good for deliverability and accessibility)
+        text: `Hi ${rawName},
+
+        Click the link below to sign in to NeuroWallet. This link expires in ${expiresMin} minutes.
+
+        ${verifyUrl}
+
+        If you didn't request this, ignore this email.
+
+        — NeuroWallet Support
+        `,
+        // HTML version (inline styles for best email client support)
         html: `
-          <p>Hi${user.name ? " " + user.name : ""},</p>
-          <p>Click the button below to sign in. This link expires in ${MAGIC_TTL_MIN} minutes.</p>
-          <p><a href="${url.toString()}" style="background:#111;color:#fff;padding:12px 16px;border-radius:6px;display:inline-block;">Sign in to NeuroWallet</a></p>
-          <p>Or copy and paste this URL:<br>${url.toString()}</p>
+        <!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <title>Sign in to NeuroWallet</title>
+        </head>
+        <body style="margin:0;padding:0;background:#f4f6fb;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#102a43;">
+          <!-- Preheader (hidden but shown in inbox preview) -->
+          <span style="display:none !important;visibility:hidden;opacity:0;height:0;width:0;overflow:hidden;mso-hide:all;">
+            Use this secure, one-time link to sign in to NeuroWallet. It expires in ${expiresMin} minutes.
+          </span>
+
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6fb;padding:24px 0;">
+            <tr>
+              <td align="center">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(16,42,67,0.08);">
+                  <!-- Header -->
+                  <tr>
+                    <td style="padding:20px 28px; text-align:left;">
+                      <span style="font-weight:700;font-size:18px;margin-left:10px;color:#0b63d6;vertical-align:middle;">NeuroWallet</span>
+                    </td>
+                  </tr>
+
+                  <!-- Body -->
+                  <tr>
+                    <td style="padding:24px 28px 12px 28px;">
+                      <h1 style="margin:0 0 8px 0;font-size:20px;color:#102a43">Hi${rawName ? " " + rawName : ""},</h1>
+                      <p style="margin:0 0 18px 0;line-height:1.5;color:#334e68;">
+                        Use the button below to securely sign in to your NeuroWallet account. For your safety this link expires in <strong>${expiresMin} minutes</strong>.
+                      </p>
+
+                      <div style="text-align:center;margin:22px 0;">
+                        <a href="${verifyUrl}" target="_blank" rel="noopener noreferrer"
+                          style="display:inline-block;padding:14px 20px;border-radius:10px;background:#0b63d6;color:#ffffff;text-decoration:none;font-weight:600;box-shadow:0 6px 18px rgba(11,99,214,0.18);">
+                          Sign in to NeuroWallet
+                        </a>
+                      </div>
+
+                      <p style="margin:8px 0 0 0;line-height:1.4;color:#556b7a;font-size:14px;">
+                        Or copy & paste this link into your browser:
+                      </p>
+                      <p style="word-break:break-all;font-size:12px;color:#0b63d6;margin:8px 0 0 0;">
+                        <a href="${verifyUrl}" style="color:#0b63d6;text-decoration:underline;">${verifyUrl}</a>
+                      </p>
+
+                      <hr style="border:none;border-top:1px solid #eef3f9;margin:20px 0;" />
+
+                      <p style="margin:0;color:#556b7a;font-size:13px;line-height:1.5;">
+                        If you didn't request this link, you can safely ignore this email — no changes were made to your account.
+                      </p>
+
+                      <p style="margin:12px 0 0 0;color:#556b7a;font-size:13px;line-height:1.4;">
+                        Need help? Reply to this email or contact support at <a href="mailto:support@your-domain.com" style="color:#0b63d6;text-decoration:underline;">support@your-domain.com</a>.
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background:#f7fbff;padding:16px 28px 20px 28px;border-top:1px solid #e6eef9;text-align:center;color:#8899a6;font-size:12px;">
+                      <div>NeuroWallet • Secure accessible banking</div>
+                      <div style="margin-top:6px;">© ${new Date().getFullYear()} NeuroWallet — All rights reserved</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Small mobile spacer -->
+                <div style="height:12px;"></div>
+
+                <!-- small text for sighted users: ensure we don't leak account-existence info -->
+                <div style="font-size:11px;color:#97a6b4;max-width:600px;text-align:center;">
+                  This is a one-time link that grants temporary sign-in access. If you did not request it, no action is necessary.
+                </div>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
         `,
       });
 

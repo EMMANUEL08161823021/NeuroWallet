@@ -17,16 +17,16 @@ async function initMailer() {
 async function sendEmail({ to, subject, html, text }) {
   if (!transporter) await initMailer();
 
-  const info = await transporter.sendMail({
-    from: process.env.MAIL_FROM || `"NeuroWallet" <${process.env.SMTP_USER}>`,
-    to,
-    subject,
-    html,
-    text,
-  });
+  try {
+    const info = await transporter.sendMail({ from: `"NeuroWallet" <${process.env.SMTP_USER}>`, to, subject, html, text });
+    console.log("✅ Email sent:", info.messageId);
+    return info;
+  } catch (err) {
+    console.error("❌ Email send failed:", err);
+    if (err.response) console.error("SMTP response:", err.response);
+    throw err;
+  }
 
-  console.log("✅ Email sent:", info.messageId);
-  return info;
 }
 
 module.exports = { sendEmail };
