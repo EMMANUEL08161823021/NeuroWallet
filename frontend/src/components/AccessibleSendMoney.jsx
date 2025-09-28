@@ -4,6 +4,7 @@ import Tesseract from "tesseract.js";
 import axios from "axios";
 import { Fingerprint } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import FingerprintConsole from "./FingerprintConsole";
 
 // Convert ArrayBuffer → base64url
 function bufToB64Url(buf) {
@@ -80,6 +81,10 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const [status, setStatus] = useState("Ready");
   const [loadingResolve, setLoadingResolve] = useState(false);
   const [loadingRecipient, setLoadingRecipient] = useState(false);
+  // const [touchStartX, setTouchStartX] = useState(null);
+  const [position, setPosition] = useState(0); // X-axis movement
+  const touchStartX = useRef(null);
+
 
   // Internal transfer fields
   const [mode, setMode] = useState("external"); // "external" (bank) | "internal" (email)
@@ -97,6 +102,8 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   useEffect(() => {
     if (liveRef.current) liveRef.current.textContent = status;
   }, [status]);
+
+  
 
   // Start camera
   const startCamera = () => {
@@ -418,6 +425,42 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     }
   };
 
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchStartX.current !== null) {
+      const deltaX = e.touches[0].clientX - touchStartX.current;
+      setPosition(deltaX);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+
+    if (deltaX > 80) {
+      // Swipe right → external
+      setMode("internal");
+      speak("External transfer selected");
+      setPosition(120);
+    } else if (deltaX < -80) {
+      // Swipe left → internal
+      setMode("external");
+      speak("Internal transfer selected");
+      setPosition(-120);
+    }
+
+    // Reset back to center after 0.8s
+    setTimeout(() => setPosition(0), 800);
+    touchStartX.current = null;
+  };
+
+
+
+
+
   return (
     <main className="min-h-screen bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col gap-4" aria-labelledby="sendMoneyTitle">
       {/* <h1 id="sendMoneyTitle" className="sr-only">Send Money</h1> */}
@@ -480,7 +523,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
               <div className="mt-3 text-base">
                 <p>Bank: <strong>{bankName || "Not found"}</strong></p>
                 <p>Account: <strong>{accountNumber || "Not found"}</strong></p>
-                <p>Name: <strong>{resolvedName || "Not Found"}</strong></p>
+                <p>Name: <strong>{resolvedName || "Not found"}</strong></p>
               </div>
             )}
           </section>
@@ -549,46 +592,14 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       </div>
 
       {/* Bottom control row: Internal left | Fingerprint center | External right */}
-      <div className="fixed bottom-4 left-0 w-full flex items-center justify-center px-4">
-        <div className="max-w-4xl flex items-center justify-between gap-4">
+      <FingerprintConsole
+        setMode={setMode}
+        speak={speak}
+        handlePressStart={handlePressStart}
+        handlePressEnd={handlePressEnd}
+        // setSwipeLocked={setSwipeLocked}
+      />
 
-          {/* Internal button (left) */}
-          <button
-            onClick={() => { setMode("internal"); speak("Internal transfer selected"); }}
-            className="w-25 h-25 rounded-full bg-yellow-500 text-black text-lg font-semibold focus:outline-none focus:ring-4"
-            aria-label="Select internal transfer"
-          >
-            Internal
-          </button>
-
-          {/* Fingerprint / confirm (center) */}
-          <div className="flex-shrink-0 mx-2">
-            <div
-              role="button"
-              tabIndex={0}
-              aria-label="Hold to confirm transfer. Press and hold Space or Enter as alternative."
-              onMouseDown={handlePressStart}
-              onMouseUp={handlePressEnd}
-              onTouchStart={handlePressStart}
-              onTouchEnd={handlePressEnd}
-              onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") handlePressStart(); }}
-              onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") handlePressEnd(); }}
-              className="w-36 h-36 rounded-full bg-blue-700 flex items-center justify-center text-white shadow-2xl select-none focus:outline-none focus:ring-8"
-            >
-              <Fingerprint size={56} strokeWidth={1.5} />
-            </div>
-          </div>
-
-          {/* External button (right) */}
-          <button
-            onClick={() => { setMode("external"); speak("External transfer selected"); }}
-            className="w-25 h-25 rounded-full bg-indigo-600 text-white text-lg font-semibold focus:outline-none focus:ring-4"
-            aria-label="Select external transfer"
-          >
-            External
-          </button>
-        </div>
-      </div>
     </main>
   );
 

@@ -31,6 +31,13 @@ a:hover {
   color: #535bf2;
 }
 
+/* Tailwind-friendly: add this class to your fingerprint wrapper */
+.no-horizontal-swipe {
+  touch-action: pan-y; /* allow vertical scrolling, block horizontal gestures */
+  -ms-touch-action: pan-y;
+}
+
+
 body {
   font-family: 'GFS Didot', serif;
 
