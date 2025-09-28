@@ -66,22 +66,65 @@ export default function Login() {
   };
 
 
-  // --- Magic link ---
+  // --- Magic link using fetch (replace your existing onMagicLink) ---
   const onMagicLink = async () => {
-    
+    if (!email || !email.trim()) {
+      setNotice("err", "Please enter a valid email address.");
+      return;
+    }
+
     setMagicBusy(true);
     setLoginMagicBusy(true);
     setMsg(null);
+
+    const controller = new AbortController();
+    // auto-abort if the request takes too long
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
+
     try {
-      await api.post("/api/auth/magic-link", { email, clientNonce: "web-" + crypto.randomUUID() });
-      setNotice("ok", "If the email exists, a sign-in link was sent.");
-    } catch {
-      setNotice("err", "Could not send magic link");
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/magic-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          clientNonce: "web-" + crypto.randomUUID(),
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      // network-level OK? then check status
+      if (!res.ok) {
+        // try to read useful error info, fallback to generic
+        let errMsg = "Could not send magic link";
+        try {
+          const errBody = await res.json();
+          errMsg = errBody?.message || errBody?.error || errMsg;
+        } catch (e) {
+          // ignore parse errors
+        }
+        setNotice("err", errMsg);
+        return;
+      }
+
+      // success path
+      const data = await res.json().catch(() => ({}));
+      setNotice("ok", data.message || "If the email exists, a sign-in link was sent.");
+    } catch (err) {
+      if (err.name === "AbortError") {
+        setNotice("err", "Request timed out — please try again.");
+      } else {
+        // network error or other
+        setNotice("err", err.message || "Could not send magic link");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setMagicBusy(false);
       setLoginMagicBusy(false);
     }
   };
+
 
   // --- Passkey register ---
   const onPasskeyRegister = async () => {

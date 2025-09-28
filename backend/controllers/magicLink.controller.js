@@ -4,6 +4,7 @@ const MagicLink = require("../models/MagicLink");
 const User = require("../models/NewUser");
 const { signAccess } = require("../utils/jwt");
 const { sendEmail } = require("../utils/mailer");
+const nodemailer = require("nodemailer");
 
 const MAGIC_TTL_MIN = 10;
 

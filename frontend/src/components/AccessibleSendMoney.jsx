@@ -352,7 +352,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     const pressDuration = Date.now() - pressStartTime.current;
     pressStartTime.current = null;
 
-    if (pressDuration < 1000) {
+    if (pressDuration < 2000) {
       setStatus("Tap detected - try long press to confirm");
       speak("Tap detected - try long press to confirm");
       return;
