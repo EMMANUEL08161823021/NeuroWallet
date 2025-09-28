@@ -30,7 +30,7 @@ async function requestMagicLink(req, res, next) {
     });
 
     if (user) {
-      const url = new URL("http://localhost:9000/api/auth/magic/verify");
+      const url = new URL(`${process.env.APP_URL}/api/auth/magic/verify`);
       url.searchParams.set("token", rawToken);
       if (clientNonce) url.searchParams.set("nonce", clientNonce);
       url.searchParams.set("redirect", "/dashboard");
@@ -98,7 +98,7 @@ async function verifyMagicLink(req, res, next) {
     }
 
     res.redirect(
-      `http://localhost:5173/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(nextPath)}`
+      `https://neuro-wallet.vercel.app/auth/callback#token=${tokenJwt}&to=${encodeURIComponent(nextPath)}`
     );
   } catch (e) {
     next(e);
