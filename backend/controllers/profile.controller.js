@@ -1,60 +1,157 @@
 // controllers/profile.controller.js
-const User = require("../models/NewUser");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const User = require("../models/NewUser");
+const MagicLink = require("../models/MagicLink");
 
+// Helper: sign a JWT (you can replace with your signAccess util)
+function signToken(user) {
+  return jwt.sign(
+    { sub: user._id, email: user.email, recentAuthAt: new Date().toISOString() },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+}
 
+/**
+ * Complete profile.
+ * Two modes:
+ *  - If request has req.user (authenticated), update their profile (existing flow).
+ *  - If body includes `token`, validate magic-link token and create the user (signup) or finalize signin.
+ *
+ * Request body (signup via magic link):
+ * {
+ *   token: "<raw magic token>",        // required for magic-link flows
+ *   firstName: "John",
+ *   phone: "+2348012345678"
+ * }
+ *
+ * Response:
+ * { success: true, token: "<jwt>", user: { ... } }
+ */
 exports.completeProfile = async (req, res, next) => {
   try {
-    const { firstName, email, phone } = req.body;
+    // If user is already authenticated via middleware, update profile (existing flow)
+    if (req.user && !req.body.token) {
+      const { firstName, phone } = req.body;
+      const userEmail = req.user.email;
+      if (!firstName || !phone) {
+        return res.status(400).json({ success: false, message: "Name and phone are required" });
+      }
 
-    // Fallback: get email from JWT if not provided
-    const userEmail = email || req.user?.email; // assuming you have auth middleware
+      const updatedUser = await User.findOneAndUpdate(
+        { email: userEmail },
+        { name: firstName, phone },
+        { new: true }
+      ).lean();
 
-    if (!userEmail) {
-      return res.status(400).json({ message: "Email is required" });
+      if (!updatedUser) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      const token = signToken(updatedUser);
+      return res.json({
+        success: true,
+        message: "Profile completed successfully",
+        token,
+        user: {
+          id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          phone: updatedUser.phone,
+          wallet: updatedUser.wallet,
+        },
+      });
     }
 
-    // Validate inputs
+    // Else: expect magic-link signup flow with a token
+    const { token, firstName, phone } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, message: "Token is required" });
+    }
     if (!firstName || !phone) {
-      return res.status(400).json({ message: "Name and phone are required" });
+      return res.status(400).json({ success: false, message: "Name and phone are required" });
     }
 
-    // Update the user
-    const updatedUser = await User.findOneAndUpdate(
-      { email: userEmail },
-      { name: firstName, phone },
-      { new: true }
-    );
+    // find candidate magic links (unused), newest first
+    const candidates = await MagicLink.find({ used: false }).sort({ createdAt: -1 }).lean();
 
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+    let match = null;
+    for (let link of candidates) {
+      // compare raw token with stored hash
+      // bcrypt.compare returns a boolean
+      /* eslint-disable no-await-in-loop */
+      if (await bcrypt.compare(token, link.tokenHash)) {
+        match = link;
+        break;
+      }
     }
 
-    // Generate JWT token after profile completion
-    const token = jwt.sign(
-      { sub: updatedUser._id, email: updatedUser.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" } // token valid for 7 days
-    );
+    if (!match) {
+      return res.status(400).json({ success: false, message: "Invalid or used token" });
+    }
 
-    res.json({
+    if (new Date(match.expiresAt) < new Date()) {
+      return res.status(400).json({ success: false, message: "Token expired" });
+    }
+
+    // optional: if magic link had a clientNonce and you wish to validate here,
+    // you can compare with a provided nonce in body. (Not required)
+    // if (match.clientNonce && match.clientNonce !== req.body.nonce) { ... }
+
+    // Check whether user already exists for that email (race protection)
+    let user = await User.findOne({ email: match.email });
+
+    if (user) {
+      // If user already exists -> treat as signin: mark magic link used and return JWT
+      await MagicLink.findByIdAndUpdate(match._id, { used: true }).exec();
+
+      const tokenJwt = signToken(user);
+      return res.json({ success: true, message: "Signed in", token: tokenJwt, user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        wallet: user.wallet,
+      }});
+    }
+
+    // Create new user
+    const newUser = new User({
+      name: firstName,
+      email: match.email, // use email from the magic link
+      phone,
+      // if you want initial wallet structure:
+      wallet: { balance: 0 },
+      // add any other defaults required by your NewUser model
+    });
+
+    await newUser.save();
+
+    // mark the magic link used now that account is created
+    await MagicLink.findByIdAndUpdate(match._id, { used: true }).exec();
+
+    const tokenJwt = signToken(newUser);
+    return res.json({
       success: true,
-      message: "Profile completed successfully",
-      token, // return token to frontend
+      message: "Account created and signed in",
+      token: tokenJwt,
       user: {
-        id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        wallet: updatedUser.wallet,
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        wallet: newUser.wallet,
       },
     });
   } catch (err) {
     console.error("❌ Error completing profile:", err);
-    next(err);
+    return next(err);
   }
 };
 
+
+// --- existing checkUser (you provided) ---
 exports.checkUser = async (req, res) => {
   try {
     const { phone, q } = req.query;
@@ -84,7 +181,3 @@ exports.checkUser = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-
-
-
