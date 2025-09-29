@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import {jwtDecode} from "jwt-decode";
 
 export default function CompleteProfile({ onSubmit }) {
   const [form, setForm] = useState({
@@ -11,20 +10,19 @@ export default function CompleteProfile({ onSubmit }) {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
 
-  // Pre-fill email from JWT on component mount
+  // On mount: read token & email from URL query, store token, pre-fill email
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        if (decoded.email) {
-          setForm((prev) => ({ ...prev, email: decoded.email }));
-        }
-      } catch (err) {
-        console.error("Invalid token", err);
-      }
-    }
+    // Read token & email from URL fragment, not query
+    const hash = window.location.hash.substring(1); // remove #
+    const params = new URLSearchParams(hash);
+    const token = params.get("token");
+    const email = params.get("email");
+
+    if (token) localStorage.setItem("magicToken", token); // temporary magic token
+    if (email) setForm((prev) => ({ ...prev, email }));
+    
   }, []);
+
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -36,9 +34,9 @@ export default function CompleteProfile({ onSubmit }) {
     setNotice(null);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setNotice({ type: "error", msg: "No access token found!" });
+      const magicToken = localStorage.getItem("magicToken");
+      if (!magicToken) {
+        setNotice({ type: "error", msg: "Magic token is required!" });
         setLoading(false);
         return;
       }
@@ -49,54 +47,37 @@ export default function CompleteProfile({ onSubmit }) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, token: magicToken }),
         }
       );
 
       const data = await res.json();
-      console.log("Data:", data);
 
       if (!res.ok) {
-        setNotice({
-          type: "error",
-          msg: data.message || "Failed to complete profile",
-        });
+        setNotice({ type: "error", msg: data.message || "Failed to complete profile" });
       } else if (data.success && data.token) {
-        // Store new token if returned
+        // Replace magic token with JWT
         localStorage.setItem("token", data.token);
-        
-        setNotice({
-          type: "success",
-          msg: data.message || "Profile completed!",
-        });
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1500);
-      } else if (data.success) {
-        setNotice({
-          type: "success",
-          msg: data.message || "Profile completed!",
-        });
+        localStorage.removeItem("magicToken");
+
+        setNotice({ type: "success", msg: data.message || "Profile completed!" });
         setTimeout(() => {
           window.location.href = "/dashboard";
         }, 1500);
       } else {
-        setNotice({
-          type: "error",
-          msg: data.message || "Failed to complete profile",
-        });
+        setNotice({ type: "success", msg: data.message || "Profile completed!" });
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1500);
       }
     } catch (err) {
-      setNotice({
-        type: "error",
-        msg: err.message || "Unexpected error occurred",
-      });
+      setNotice({ type: "error", msg: err.message || "Unexpected error occurred" });
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">

@@ -8,7 +8,7 @@ const MAGIC_TTL_MIN = 10;
 const expiresMin = MAGIC_TTL_MIN || 15;
 
 
-// ... other requires (User, MagicLink, sendEmail, etc.)
+
 
 async function requestMagicLink(req, res, next) {
   try {
@@ -42,12 +42,15 @@ async function requestMagicLink(req, res, next) {
     const appOrigin = (process.env.APP_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
     const verifyEndpoint = `${appOrigin}/api/auth/magic/verify`; // existing server verify endpoint
     const verifyUrl = new URL(verifyEndpoint);
-    verifyUrl.searchParams.set("token", rawToken);
+    
     if (clientNonce) verifyUrl.searchParams.set("nonce", clientNonce);
-
+    
     // Prepare frontend redirect target included in email
     const frontendRedirect = action === "signin" ? "/dashboard" : "/complete-profile";
     verifyUrl.searchParams.set("redirect", frontendRedirect);
+    verifyUrl.searchParams.set("token", rawToken);
+    verifyUrl.searchParams.set("email", email);
+
 
     // email copy differs by action
     const appName = "NeuroWallet";
@@ -187,8 +190,6 @@ If you didn't request this, ignore this message.
     next(err);
   }
 }
-
-module.exports = { requestMagicLink };
 
 
 // GET /api/auth/magic/verify

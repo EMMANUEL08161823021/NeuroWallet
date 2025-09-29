@@ -134,7 +134,7 @@ exports.completeProfile = async (req, res, next) => {
     const tokenJwt = signToken(newUser);
     return res.json({
       success: true,
-      message: "Account created and signed in",
+      message: "Wallet created and signed in",
       token: tokenJwt,
       user: {
         id: newUser._id,
