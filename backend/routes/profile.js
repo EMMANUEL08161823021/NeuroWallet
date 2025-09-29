@@ -5,7 +5,7 @@ const { requireAuth } = require("../middleware/auth");
 
 
 // inside routes/profile.js
-router.post("/complete-profile", requireAuth, profileController.completeProfile);
+router.post("/complete-profile", profileController.completeProfile);
 
 
 router.get("/lookup", requireAuth, profileController.checkUser);
