@@ -1,32 +1,24 @@
-const nodemailer = require("nodemailer");
+// mailer.js
+const { Resend } = require("resend");
 
-let transporter;
-
-async function initMailer() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      service: "gmail", // Gmail service
-      auth: {
-        user: process.env.SMTP_USER, // your Gmail address
-        pass: process.env.SMTP_PASS, // your Google App Password (not your normal password)
-      },
-    });
-  }
-}
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendEmail({ to, subject, html, text }) {
-  if (!transporter) await initMailer();
-
   try {
-    const info = await transporter.sendMail({ from: `"NeuroWallet" <${process.env.SMTP_USER}>`, to, subject, html, text });
-    console.log("✅ Email sent:", info.messageId);
+    const info = await resend.emails.send({
+      from: "onboarding@resend.dev",
+      to,
+      subject,
+      html,
+      text,
+    });
+
+    console.log("✅ Email sent:", info);
     return info;
   } catch (err) {
-    console.error("❌ Email send failed:", err);
-    if (err.response) console.error("SMTP response:", err.response);
+    console.error("❌ Email error:", err);
     throw err;
   }
-
 }
 
 module.exports = { sendEmail };

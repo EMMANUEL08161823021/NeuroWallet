@@ -97,7 +97,7 @@ router.get("/profile", requireAuth, async (req, res) => {
   try {
     const email = req.user.email; // ✅ decoded from JWT inside requireAuth
 
-    console.log("Decoded email:", email);
+    // console.log("Decoded email:", email);
 
     const user = await User.findOne({ email });
 

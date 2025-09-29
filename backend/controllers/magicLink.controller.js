@@ -29,6 +29,7 @@ async function requestMagicLink(req, res, next) {
       clientNonce,
       used: false,
     });
+    
 
     if (user) {
       // const url = new URL("http://localhost:9000/api/auth/magic/verify");
@@ -144,7 +145,7 @@ async function requestMagicLink(req, res, next) {
 
       // Dev: log preview URL
       if (process.env.NODE_ENV !== "production") {
-        console.log("💌 Preview link:", nodemailer.getTestMessageUrl(info));
+        nodemailer.getTestMessageUrl(info);
       }
     }
 
