@@ -1,32 +1,41 @@
 import { useState, useEffect } from "react";
+import {jwtDecode} from "jwt-decode";
 
-export default function CompleteProfile({ onSubmit }) {
+export default function CompleteProfile() {
   const [form, setForm] = useState({
     firstName: "",
     email: "",
     phone: "",
   });
-
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
 
-  // On mount: read token & email from URL query, store token, pre-fill email
+  // On mount: handle passkey JWT or magic link fragment
   useEffect(() => {
-    // Read token & email from URL fragment, not query
-    const hash = window.location.hash.substring(1); // remove #
-    const params = new URLSearchParams(hash);
-    const token = params.get("token");
-    const email = params.get("email");
+    // 1️⃣ Check passkey JWT first
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        if (decoded.email) setForm((prev) => ({ ...prev, email: decoded.email }));
+      } catch (err) {
+        console.error("Invalid JWT", err);
+      }
+    }
 
-    if (token) localStorage.setItem("magicToken", token); // temporary magic token
-    if (email) setForm((prev) => ({ ...prev, email }));
-    
+    // 2️⃣ Check magic link token in URL fragment
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      const params = new URLSearchParams(hash);
+      const magicToken = params.get("token");
+      const email = params.get("email");
+
+      if (magicToken) localStorage.setItem("magicToken", magicToken);
+      if (email) setForm((prev) => ({ ...prev, email }));
+    }
   }, []);
 
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,20 +44,33 @@ export default function CompleteProfile({ onSubmit }) {
 
     try {
       const magicToken = localStorage.getItem("magicToken");
-      if (!magicToken) {
-        setNotice({ type: "error", msg: "Magic token is required!" });
+      const passkeyToken = localStorage.getItem("token");
+
+      if (!magicToken && !passkeyToken) {
+        setNotice({ type: "error", msg: "No token found!" });
         setLoading(false);
         return;
       }
+
+      console.log("passKey:", passkeyToken);
+
+      const isMagic = !!magicToken;
+      const isPasskey = !!passkeyToken && !isMagic; // Only passkey if no magic token
+
+      const headers = { "Content-Type": "application/json" };
+      if (isPasskey) {
+        headers.Authorization = `Bearer ${passkeyToken}`;
+      }
+
+      const body = { ...form };
+      if (isMagic) body.token = magicToken;
 
       const res = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/user/complete-profile`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ ...form, token: magicToken }),
+          headers,
+          body: JSON.stringify(body),
         }
       );
 
@@ -56,20 +78,15 @@ export default function CompleteProfile({ onSubmit }) {
 
       if (!res.ok) {
         setNotice({ type: "error", msg: data.message || "Failed to complete profile" });
-      } else if (data.success && data.token) {
-        // Replace magic token with JWT
-        localStorage.setItem("token", data.token);
-        localStorage.removeItem("magicToken");
+      } else {
+        // If magic token was used, replace with JWT
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          if (isMagic) localStorage.removeItem("magicToken");
+        }
 
         setNotice({ type: "success", msg: data.message || "Profile completed!" });
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1500);
-      } else {
-        setNotice({ type: "success", msg: data.message || "Profile completed!" });
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1500);
+        setTimeout(() => (window.location.href = "/dashboard"), 1500);
       }
     } catch (err) {
       setNotice({ type: "error", msg: err.message || "Unexpected error occurred" });
@@ -77,7 +94,6 @@ export default function CompleteProfile({ onSubmit }) {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
@@ -138,7 +154,7 @@ export default function CompleteProfile({ onSubmit }) {
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              placeholder="08012345678"
+              placeholder="+2348012345678"
               required
               className="mt-1 w-full rounded-lg border px-3 py-2 dark:bg-gray-700 dark:text-white focus:ring focus:ring-green-400"
             />
