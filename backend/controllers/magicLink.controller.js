@@ -4,7 +4,6 @@ const MagicLink = require("../models/MagicLink");
 const User = require("../models/NewUser");
 const { signAccess } = require("../utils/jwt");
 const { sendEmail } = require("../utils/mailer");
-const nodemailer = require("nodemailer");
 const MAGIC_TTL_MIN = 10;
 const expiresMin = MAGIC_TTL_MIN || 15;
 
@@ -142,11 +141,6 @@ async function requestMagicLink(req, res, next) {
         </html>
         `,
       });
-
-      // Dev: log preview URL
-      if (process.env.NODE_ENV !== "production") {
-        nodemailer.getTestMessageUrl(info);
-      }
     }
 
     res.json({ ok: true, message: "If an account exists, a link was sent." });

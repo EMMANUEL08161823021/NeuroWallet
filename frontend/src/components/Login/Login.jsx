@@ -77,9 +77,9 @@ export default function Login() {
     setLoginMagicBusy(true);
     setMsg(null);
 
-    const controller = new AbortController();
+    // const controller = new AbortController();
     // auto-abort if the request takes too long
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
+    // const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
 
     try {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/magic-link`, {
@@ -92,7 +92,7 @@ export default function Login() {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
+      // clearTimeout(timeoutId);
 
       // network-level OK? then check status
       if (!res.ok) {
@@ -119,7 +119,7 @@ export default function Login() {
         setNotice("err", err.message || "Could not send magic link");
       }
     } finally {
-      clearTimeout(timeoutId);
+      // clearTimeout(timeoutId);
       setMagicBusy(false);
       setLoginMagicBusy(false);
     }
