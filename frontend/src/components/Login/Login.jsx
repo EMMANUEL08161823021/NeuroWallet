@@ -89,7 +89,7 @@ export default function Login() {
           email: email.trim().toLowerCase(),
           clientNonce: "web-" + crypto.randomUUID(),
         }),
-        signal: controller.signal,
+        // signal: controller.signal,
       });
 
       // clearTimeout(timeoutId);
