@@ -264,7 +264,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       const userData = res.data.user || res.data.data || res.data;
       setField("recipientNameInternal", userData?.name || userData?.fullName || "");
       setField("status", "Recipient found.");
-      speak("Recipient found");
+      speak("Recipient found, Tap the button to say amount");
     } catch (err) {
       console.warn("Lookup failed:", err?.response?.data || err.message);
       if (!mounted.current) return;
@@ -375,15 +375,15 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
   // Perform funding (example endpoint). Adjust endpoint/backend as needed.
   const fundWallet = async () => {
-    if (!state.fundAmount || Number(state.fundAmount) <= 0) {
+    if (!state.amount || Number(state.amount) <= 0) {
       setField("status", "Please enter a valid amount to fund.");
       speak("Please enter a valid amount to fund.");
       return;
     }
 
-    const amount = state.fundAmount;
-    
+    const amount = Number(state.amount);
 
+  
     setField("funding", true);
     setField("status", "Funding wallet...");
     try {
@@ -440,17 +440,14 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     const pressDuration = Date.now() - pressStartTime.current;
     pressStartTime.current = null;
 
-    if (pressDuration < 2000) {
-      setField("status", "Tap detected - try long press to confirm");
-      speak("Tap detected - try long press to confirm");
-      return;
-    }
+    if (pressDuration > 2000)
 
     // Long press → WebAuthn authentication then do transfer (internal or external)
     await authenticateAndTransfer();
   };
 
   const authenticateAndTransfer = async () => {
+
     try {
       setField("status", "Authenticating...");
       const token = localStorage.getItem("token");
@@ -499,12 +496,16 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       setField("status", "✅ Authenticated. Proceeding with transfer...");
       speak("Authenticated. Proceeding with transfer.");
 
-      // Branch
       if (state.mode === "internal") {
         await doInternalTransfer();
-      } else {
+      } else if (state.mode === "external") {
         await doExternalTransfer();
+      } else if (state.mode === "fund") {
+        await fundWallet();
+      } else {
+        throw new Error(`Unsupported mode: ${state.mode}`);
       }
+
     } catch (err) {
       console.error("Auth/transfer error:", err?.response?.data || err.message);
       if (!mounted.current) return;
@@ -560,11 +561,16 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       </div>
 
       {/* Content area */}
-      <div className="flex-1 flex flex-col gap-4">
+      {/* Content area */}
+      <div className="flex-1 flex flex-col gap-4" aria-live="polite">
+
         {/* top controls: phone input or camera info */}
         {state.mode === "internal" && (
-          <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-            <label htmlFor="toPhone" className="block text-lg font-semibold mb-2">Recipient phone</label>
+          <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg" aria-labelledby="recipient-phone-label">
+            <label id="recipient-phone-label" htmlFor="toPhone" className="block text-lg font-semibold mb-2">
+              Recipient phone
+            </label>
+
             <div className="flex gap-2">
               <input
                 id="toPhone"
@@ -572,20 +578,40 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
                 value={state.phone}
                 onChange={(e) => setField("phone", e.target.value)}
                 placeholder="+2348012345678"
-                className="flex-1 p-3 text-lg rounded border focus:ring-4"
+                className="flex-1 p-3 text-lg rounded border focus:ring-4 focus:ring-blue-300"
                 aria-describedby="phoneHelp"
+                aria-label="Recipient phone number"
               />
-              <button onClick={lookupInternalRecipient} className="px-4 py-3 rounded-lg bg-gray-800 text-white font-semibold" aria-label="Find recipient">Find</button>
+              <button
+                onClick={lookupInternalRecipient}
+                className="px-4 py-3 rounded-lg bg-gray-800 text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                aria-label="Find recipient by phone"
+                disabled={!state.phone || state.lookuping}
+              >
+                {state.lookuping ? "Finding…" : "Find"}
+              </button>
             </div>
-            <p id="phoneHelp" className="mt-2 text-base">{state.recipientNameInternal ? <>Found: <strong>{state.recipientNameInternal}</strong></> : "Tip: Use numbers only or use the Speak option."}</p>
+
+            <p id="phoneHelp" className="mt-2 text-base">
+              {state.recipientNameInternal
+                ? <>Found: <strong>{state.recipientNameInternal}</strong></>
+                : "Tip: Use digits only or press the Speak button to enter recipient by voice."}
+            </p>
           </section>
         )}
 
         {state.mode === "external" && (
-          <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold mb-2">External transfer (camera)</h2>
+          <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg" aria-labelledby="external-transfer-label">
+            <h2 id="external-transfer-label" className="text-lg font-semibold mb-2">External transfer (camera)</h2>
+
             <div className="flex gap-2">
-              <button onClick={startCamera} className="flex-1 py-3 rounded-lg bg-indigo-600 text-white font-semibold" aria-label="Open camera">Open Camera</button>
+              <button
+                onClick={startCamera}
+                className="flex-1 py-3 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
+                aria-label="Open back camera to scan account number"
+              >
+                Open Camera (Back)
+              </button>
             </div>
 
             {state.stage === "camera" && (
@@ -599,9 +625,23 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
                     className="w-full h-56 object-cover"
                   />
                 </div>
+
                 <div className="flex gap-2 mt-2">
-                  <button onClick={snapAndOcr} className="flex-1 py-3 rounded-lg bg-indigo-700 text-white font-semibold">Snap</button>
-                  <button onClick={() => { setStage("idle"); setField("status", "Cancelled"); speak("Cancelled"); }} className="flex-1 py-3 rounded-lg bg-gray-300 text-black">Cancel</button>
+                  <button
+                    onClick={snapAndOcr}
+                    className="flex-1 py-3 rounded-lg bg-indigo-700 text-white font-semibold"
+                    aria-label="Snap picture to scan account details"
+                  >
+                    {state.scanning ? "Scanning…" : "Snap"}
+                  </button>
+
+                  <button
+                    onClick={() => { setStage("idle"); setField("status", "Cancelled"); speak("Cancelled"); }}
+                    className="flex-1 py-3 rounded-lg bg-gray-300 text-black"
+                    aria-label="Cancel camera"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}
@@ -617,37 +657,25 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         )}
 
         {state.mode === "fund" && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold mb-2">Fund Wallet</h3>
-            <p className="text-sm mb-3">Enter amount to add to your wallet.</p>
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={state.fundAmount}
-              onChange={(e) => setField("fundAmount", e.target.value)}
-              placeholder="Amount (NGN)"
-              className="w-full p-3 rounded border mb-3"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={fundWallet}
-                // disabled={state.funding}
-                className="flex-1 py-2 rounded-lg bg-green-600 text-white font-semibold"
-              >
-                {state.funding ? "Funding..." : "Fund wallet"}
-              </button>
-              <button onClick={() => setStage("idle")} className="flex-1 py-2 rounded-lg bg-gray-300">
-                Cancel
-              </button>
-            </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl" role="region" aria-labelledby="fund-wallet-label">
+            <h3 id="fund-wallet-label" className="text-lg font-bold mb-2">Fund Wallet</h3>
+            <p className="text-sm">Enter amount to add to your wallet.</p>
           </div>
         )}
 
         {/* amount area (shared) */}
-        <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <label className="block text-lg font-semibold mb-2">Amount</label>
-          <div className="flex gap-2">
-            <button onClick={listenForAmount} className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold" aria-label="Speak amount">🎤 Speak</button>
+        <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg" aria-labelledby="amount-label">
+          <label id="amount-label" className="block text-lg font-semibold mb-2">Amount</label>
+
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={listenForAmount}
+              className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold"
+              aria-label="Speak amount in naira"
+            >
+              🎤 Speak
+            </button>
+
             <input
               type="tel"
               inputMode="numeric"
@@ -658,13 +686,27 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
               aria-label="Amount in naira"
             />
           </div>
+
+          {/* quick presets to speed input for motor-impaired users */}
+          <div className="mt-3 flex gap-2">
+            {[1000, 2000, 5000, 10000].map((val) => (
+              <button
+                key={val}
+                onClick={() => setField("amount", String(val))}
+                className="px-3 py-1 rounded-md  bg-gray-200 dark:bg-gray-400 hover:bg-gray-300 text-sm"
+                aria-label={`Quick amount ${val} naira`}
+              >
+                ₦{val}
+              </button>
+            ))}
+          </div>
+
           <div className="mt-2 text-lg">Amount: <strong>₦{state.amount || "—"}</strong></div>
         </section>
 
-
         {/* confirm summary */}
         {state.stage === "confirm" && (
-          <section role="region" aria-label="Confirm transfer" className="bg-white border-2 border-yellow-400 p-4 rounded-lg">
+          <section role="region" aria-label="Confirm transfer" className="bg-white dark:bg-gray-800 border-2 border-yellow-400 p-4 rounded-lg">
             <h3 className="text-xl font-bold mb-2">Confirm</h3>
 
             {state.mode === "internal" ? (
@@ -679,22 +721,36 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
                 <p className="text-lg">Name: <strong>{state.resolvedName}</strong></p>
               </>
             )}
+            
 
             <p className="text-lg mt-2">Amount: <strong>₦{state.amount}</strong></p>
-            <p className="mt-3 text-base">Hold the button below to authenticate and send.</p>
+            <p className="mt-3 text-base">Hold the button below to authenticate and send. Tap to cancel.</p>
+
+            <div className="mt-3 flex gap-2">
+              {/* Cancel button */}
+              <button
+                onClick={() => { setStage("idle"); setField("status", "Cancelled"); speak("Transaction cancelled"); }}
+                className="flex-1 py-3 rounded-lg bg-gray-300 dark:bg-gray-400 text-white"
+                aria-label="Cancel transaction"
+              >
+                Cancel
+              </button>
+            </div>
           </section>
         )}
 
         {/* processing / done */}
-        {state.stage === "sending" && <div className="p-4 rounded-lg bg-gray-100 text-center text-lg">Processing transfer...</div>}
+        {state.stage === "sending" && <div className="p-4 rounded-lg bg-gray-100 text-center text-lg">Processing transfer…</div>}
 
         {state.stage === "done" && (
-          <div className="p-4 rounded-lg bg-green-50 text-center">
+          <div className="p-4 rounded-lg bg-green-50 dark:bg-gray-800 text-center">
             <p className="text-2xl font-bold text-green-700">{state.status}</p>
             <button onClick={() => resetAll("Ready")} className="mt-3 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold">Done</button>
           </div>
         )}
+
       </div>
+
 
       {/* Bottom control row: Internal left | Fingerprint center | External right */}
       <FingerprintConsole

@@ -46,15 +46,19 @@ export default function FingerprintConsole({ handlePressStart, handlePressEnd, s
     // prioritize horizontal if clearly horizontal, else vertical
     if (Math.abs(dx) > HORIZ_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
       if (dx > 0) {
-        setMode?.("external"); speak?.("External selected"); setPosX(SNAP);
+        setMode?.("external"); 
+        speak?.("External Transfer selected"); 
+        setPosX(SNAP);
       } else {
-        setMode?.("internal"); speak?.("Internal selected"); setPosX(-SNAP);
+        setMode?.("internal"); speak?.("Internal Transfer selected"); setPosX(-SNAP);
       }
     } else if (dy > VERT_THRESHOLD) {
       // Swipe up → fund wallet
       onFund?.();
       speak?.("Funding wallet");
-      setMode?.("fund"); speak?.("Wallet Fund selected"); setPosY(SNAP_UP);
+      setMode?.("fund"); 
+      speak?.("Fund Wallet selected, tap to say amount"); 
+      setPosY(SNAP_UP);
     } else {
       setPosX(0);
       setPosY(0);
