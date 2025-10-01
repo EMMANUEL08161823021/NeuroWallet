@@ -219,46 +219,98 @@ router.post("/webhook", express.json({ type: "*/*" }), async (req, res) => {
 
 
 // Verify Payment & Update Balance
+// GET /api/wallet/verify/:reference
 router.get("/verify/:reference", requireAuth, async (req, res) => {
   try {
     const { reference } = req.params;
+    if (!reference) return res.status(400).json({ msg: "Missing payment reference" });
 
+    // Ensure we have a secret key available
+    const PAYSTACK_SECRET_KEY = process.env.VITE_PAYSTACK_SECRET_KEY;
+    if (!PAYSTACK_SECRET_KEY) {
+      console.error("Missing Paystack secret key in env");
+      return res.status(500).json({ msg: "Server misconfiguration" });
+    }
+
+    // Call Paystack verify endpoint
     const verifyRes = await axios.get(
-      `https://api.paystack.co/transaction/verify/${reference}`,
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.VITE_PAYSTACK_SECRET_KEY}`,
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         },
       }
     );
 
-    const data = verifyRes.data.data;
-    if (data.status === "success") {
-      const user = await User.findById(req.user.sub); // <- use sub here
+    // paystack returns a top-level boolean "status" and data in data.data
+    const ok = verifyRes?.data?.status;
+    const data = verifyRes?.data?.data;
 
-      if (!user) return res.status(404).json({ msg: "User not found" });
-
-      user.wallet.balance += data.amount / 100; // Paystack sends kobo
-      user.transactions.push({
-        type: "fund",
-        amount: data.amount / 100,
-        reference: data.reference,
-        status: "success",
-      });
-
-      await user.save();
-
-      return res.json({
-        msg: "Wallet funded successfully",
-        balance: user.wallet.balance,
-      });
+    if (!ok || !data) {
+      console.warn("Paystack returned unexpected shape:", verifyRes.data);
+      return res.status(400).json({ msg: "Payment verification failed (unexpected response)" });
     }
 
-    res.status(400).json({ msg: "Payment verification failed" });
+    // Paystack transaction status field (e.g. "success")
+    if (data.status !== "success") {
+      return res.status(400).json({ msg: `Payment not successful: ${data.status || "unknown"}` });
+    }
+
+    // Find user by token subject
+    const user = await User.findById(req.user.sub);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    // Idempotency: check whether we've already recorded this reference
+    const already = user.transactions?.some((t) => t.reference === data.reference);
+    if (already) {
+      return res.json({ msg: "Payment already processed", balance: user.wallet?.balance ?? 0 });
+    }
+
+    // Convert amount (Paystack amount is in kobo)
+    const amountNaira = Number(data.amount) / 100;
+
+    // Update wallet and transaction history
+    user.wallet = user.wallet || { balance: 0 };
+    user.wallet.balance = (user.wallet.balance || 0) + amountNaira;
+
+    user.transactions = user.transactions || [];
+    user.transactions.push({
+      type: "fund",
+      amount: amountNaira,
+      reference: data.reference,
+      status: "success",
+      provider: "paystack",
+      raw: data, // optional: keep full paystack payload (consider size/privacy)
+      createdAt: new Date(),
+    });
+
+    await user.save();
+
+    return res.json({
+      msg: "Wallet funded successfully",
+      balance: user.wallet.balance,
+      reference: data.reference,
+      amount: amountNaira,
+    });
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    // Distinguish axios (Paystack) errors vs internal errors
+    if (err.response) {
+      // Paystack returned non-2xx
+      console.error("Paystack error:", err.response.status, err.response.data);
+      const msg = err.response.data?.message || err.response.data?.error || "Payment provider error";
+      return res.status(502).json({ msg: `Payment provider error: ${msg}` });
+    }
+
+    if (err.code === "ECONNABORTED") {
+      console.error("Paystack request timeout", err);
+      return res.status(504).json({ msg: "Payment verification timed out" });
+    }
+
+    console.error("Internal error verifying payment:", err);
+    return res.status(500).json({ msg: err.message || "Internal server error" });
   }
 });
+
 
 
 // POST /api/wallet/transfer/internal
