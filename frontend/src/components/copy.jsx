@@ -1,4 +1,4 @@
-import React, { useReducer, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import Tesseract from "tesseract.js";
 import axios from "axios";
@@ -63,104 +63,80 @@ const BANK_NAME_TO_CODE = {
   "gtbank plc": "058"
 };
 
-const initialState = {
-  stage: "idle", // idle | camera | amount | confirm | sending | done
-  ocrText: "",
-  accountNumber: "",
-  bankName: "",
-  bankCode: "",
-  resolvedName: "",
-  recipientCode: "",
-  amount: "",
-  fundAmount: "",
-  funding: false,
-  status: "Ready",
-  loading: { resolve: false, recipient: false },
-  position: 0,
-  mode: "external", // external | internal | fund
-  phone: "",
-  recipientNameInternal: "",
-};
-
-function reducer(state, action) {
-  switch (action.type) {
-    case "SET_FIELD":
-      return { ...state, [action.field]: action.value };
-    case "SET_LOADING":
-      return { ...state, loading: { ...state.loading, [action.key]: action.value } };
-    case "SET_STAGE":
-      return { ...state, stage: action.stage };
-    case "MERGE":
-      return { ...state, ...action.payload };
-    case "RESET":
-      return { ...initialState, status: action.status || initialState.status };
-    default:
-      return state;
-  }
-}
-
 export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_ACCOUNT_ID" }) {
   const webcamRef = useRef(null);
   const liveRef = useRef(null);
   const pressStartTime = useRef(null);
   const mounted = useRef(true);
+
+  // stages: idle | camera | amount | confirm | sending | done
+  const [stage, setStage] = useState("idle");
+  const [ocrText, setOcrText] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankCode, setBankCode] = useState("");
+  const [resolvedName, setResolvedName] = useState("");
+  const [recipientCode, setRecipientCode] = useState("");
+  const [amount, setAmount] = useState("");
+  const [status, setStatus] = useState("Ready");
+  const [loadingResolve, setLoadingResolve] = useState(false);
+  const [loadingRecipient, setLoadingRecipient] = useState(false);
+  // const [touchStartX, setTouchStartX] = useState(null);
+  const [position, setPosition] = useState(0); // X-axis movement
   const touchStartX = useRef(null);
 
-  const [state, dispatch] = useReducer(reducer, initialState);
+
+  // Internal transfer fields
+  const [mode, setMode] = useState("external"); // "external" (bank) | "internal" (email)
+  const [phone, setPhone] = useState("");
+  const [recipientNameInternal, setRecipientNameInternal] = useState("");
 
   const { user } = useApp();
   const email = user?.email;
 
   useEffect(() => {
     mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
+    return () => { mounted.current = false; };
   }, []);
 
   useEffect(() => {
-    if (liveRef.current) liveRef.current.textContent = state.status;
-  }, [state.status]);
+    if (liveRef.current) liveRef.current.textContent = status;
+  }, [status]);
 
-  // small helpers so we don't sprinkle dispatch calls everywhere
-  const setField = (field, value) => dispatch({ type: "SET_FIELD", field, value });
-  const setLoading = (key, value) => dispatch({ type: "SET_LOADING", key, value });
-  const setStage = (stage) => dispatch({ type: "SET_STAGE", stage });
-  const merge = (payload) => dispatch({ type: "MERGE", payload });
-  const resetAll = (status = "Ready") => dispatch({ type: "RESET", status });
+  
 
   // Start camera
   const startCamera = () => {
-    setField("status", "Camera opened. Point at account details and tap 'Snap'.");
+    setStatus("Camera opened. Point at account details and tap 'Snap'.");
     speak("Camera opened. Point at account details and tap snap.");
     setStage("camera");
   };
 
   // OCR snap
   const snapAndOcr = async () => {
-    setField("status", "Capturing image...");
+    setStatus("Capturing image...");
     speak("Capturing image");
     const image = webcamRef.current?.getScreenshot();
     if (!image) {
-      setField("status", "Unable to capture image.");
+      setStatus("Unable to capture image.");
       speak("Unable to capture image. Try again.");
       return;
     }
 
-    setField("status", "Scanning image...");
+    setStatus("Scanning image...");
     speak("Scanning image. Please hold still.");
     try {
       const { data } = await Tesseract.recognize(image, "eng");
       const text = data?.text || "";
       if (!mounted.current) return;
-      setField("ocrText", text);
+      setOcrText(text);
 
       const accMatch = text.match(/\b\d{9,12}\b/);
       const bankMatch = text.match(/\b(Access|GTB|GTBank|UBA|Zenith|First\s+Bank|Union|Fidelity|Ecobank|Polaris|Sterling|FCMB|Wema|Stanbic|GTBank)\b/i);
 
       if (!accMatch || !bankMatch) {
         setStage("camera");
-        setField("status", "Account or bank not detected. Try again or enter manually.");
+        setStatus("Account or bank not detected. Try again or enter manually.");
         speak("Account or bank not detected. Please try again or enter manually.");
         return;
       }
@@ -168,13 +144,13 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       const acc = accMatch[0].trim();
       const bankRaw = bankMatch[0].trim();
       if (!mounted.current) return;
-      setField("accountNumber", acc);
-      setField("bankName", bankRaw);
+      setAccountNumber(acc);
+      setBankName(bankRaw);
 
       const mapped = mapBankNameToCode(bankRaw);
-      setField("bankCode", mapped || "");
+      setBankCode(mapped || "");
       if (!mapped) {
-        setField("status", `Detected bank "${bankRaw}" — please select bank code manually.`);
+        setStatus(`Detected bank "${bankRaw}" — please select bank code manually.`);
         speak(`Detected bank ${bankRaw} — please select bank from the list.`);
         setStage("amount");
         return;
@@ -185,7 +161,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     } catch (err) {
       console.error(err);
       if (!mounted.current) return;
-      setField("status", "OCR failed. Try again.");
+      setStatus("OCR failed. Try again.");
       speak("Scanning failed. Please try again.");
     }
   };
@@ -198,8 +174,8 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
   // Resolve account (server->Paystack) and optionally create recipient
   async function resolveAccountAndCreateRecipient(accNum, bCode) {
-    setLoading("resolve", true);
-    setField("status", "Resolving account...");
+    setLoadingResolve(true);
+    setStatus("Resolving account...");
     try {
       const token = localStorage.getItem("token");
       const resolveRes = await axios.get(
@@ -207,18 +183,18 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         {
           params: { account_number: accNum, bank_code: bCode },
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
+          timeout: 10000
         }
       );
 
       if (!mounted.current) return;
       const account_name = resolveRes.data.data?.account_name || "";
-      setField("resolvedName", account_name);
-      setField("status", `Account resolved: ${account_name}`);
+      setResolvedName(account_name);
+      setStatus(`Account resolved: ${account_name}`);
       speak(`Account resolved: ${account_name}`);
 
       // Create recipient
-      setLoading("recipient", true);
+      setLoadingRecipient(true);
       const createRes = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/recipient`,
         { name: account_name, account_number: accNum, bank_code: bCode },
@@ -228,48 +204,48 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       if (!mounted.current) return;
       const r = createRes.data.recipient || createRes.data.data || createRes.data;
       const code = r.recipient_code || r.recipientCode || r.recipient || r.code || r.recipient_code;
-      setField("recipientCode", code);
-      setField("status", "Recipient created. Ready to set amount.");
+      setRecipientCode(code);
+      setStatus("Recipient created. Ready to set amount.");
       setStage("amount");
       speak("Recipient created. How much would you like to send?");
     } catch (err) {
       console.error("Resolve/create recipient error:", err?.response?.data || err.message);
       if (!mounted.current) return;
-      setField("status", "Could not resolve or create recipient. Please verify details.");
+      setStatus("Could not resolve or create recipient. Please verify details.");
       speak("Could not resolve or create recipient. Please verify details or try again.");
       setStage("amount");
     } finally {
       if (mounted.current) {
-        setLoading("resolve", false);
-        setLoading("recipient", false);
+        setLoadingResolve(false);
+        setLoadingRecipient(false);
       }
     }
   }
 
-  // Internal recipient lookup by phone (optional helper)
+  // Internal recipient lookup by email (optional helper)
   const lookupInternalRecipient = async () => {
-    if (!state.phone) {
-      setField("status", "Please enter recipient phone number to lookup.");
+    if (!phone) {
+      setStatus("Please enter recipient phone number to lookup.");
       return;
     }
-    setField("status", "Looking up recipient...");
+    setStatus("Looking up recipient...");
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user/lookup`, {
-        params: { phone: state.phone },
+        params: { phone: phone },
         headers: { Authorization: `Bearer ${token}` },
-        timeout: 8000,
+        timeout: 8000
       });
       if (!mounted.current) return;
       const userData = res.data.user || res.data.data || res.data;
-      setField("recipientNameInternal", userData?.name || userData?.fullName || "");
-      setField("status", "Recipient found.");
+      setRecipientNameInternal(userData?.name || userData?.fullName || "");
+      setStatus("Recipient found.");
       speak("Recipient found");
     } catch (err) {
       console.warn("Lookup failed:", err?.response?.data || err.message);
       if (!mounted.current) return;
-      setField("recipientNameInternal", "");
-      setField("status", "Recipient not found. You can still proceed — backend will validate.");
+      setRecipientNameInternal("");
+      setStatus("Recipient not found. You can still proceed — backend will validate.");
       speak("Recipient not found. You can still proceed.");
     }
   };
@@ -278,7 +254,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const listenForAmount = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setField("status", "Voice input not supported.");
+      setStatus("Voice input not supported.");
       speak("Voice input not supported. Please type the amount.");
       return;
     }
@@ -289,7 +265,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      setField("status", "Listening for amount...");
+      setStatus("Listening for amount...");
       speak("Listening for amount. Please say the amount now.");
     };
 
@@ -298,20 +274,20 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       const transcript = ev.results[0][0].transcript;
       const parsed = parseAmountFromSpeech(transcript);
       if (parsed && !isNaN(parsed)) {
-        setField("amount", String(parsed));
-        setField("status", `Amount set to ₦${parsed}`);
+        setAmount(String(parsed));
+        setStatus(`Amount set to ₦${parsed}`);
         speak(`Amount set to ${parsed} naira`);
         setStage("confirm");
-        speak(`You are sending naira ${parsed} to ${state.mode === "internal" ? state.phone || state.recipientNameInternal || "recipient" : state.resolvedName || state.accountNumber}. Press and hold to confirm.`);
+        speak(`You are sending naira ${parsed} to ${mode === "internal" ? toEmail || recipientNameInternal || "recipient" : resolvedName || accountNumber}. Press and hold to confirm.`);
       } else {
-        setField("status", "Could not understand amount. Please try again.");
+        setStatus("Could not understand amount. Please try again.");
         speak("Could not understand the amount. Please try again.");
       }
     };
 
     recognition.onerror = () => {
       if (!mounted.current) return;
-      setField("status", "Voice recognition error");
+      setStatus("Voice recognition error");
       speak("Voice recognition error. Please try again.");
     };
 
@@ -322,22 +298,22 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const doInternalTransfer = async () => {
     try {
       const token = localStorage.getItem("token");
-      setField("status", "Initiating internal transfer...");
+      setStatus("Initiating internal transfer...");
       setStage("sending");
       const res = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/internal-transfer`,
-        { phone: state.phone, amount: Number(state.amount) },
+        { phone, amount: Number(amount) },
         { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
       );
       if (!mounted.current) return;
-      setField("status", res.data?.message || "Internal transfer successful");
+      setStatus(res.data?.message || "Internal transfer successful");
       speak("Transfer successful");
       setStage("done");
     } catch (err) {
       console.error("Internal transfer error:", err?.response?.data || err.message);
       if (!mounted.current) return;
       const message = err?.response?.data?.msg || err?.response?.data?.message || err?.message || "Transfer failed";
-      setField("status", "❌ " + message);
+      setStatus("❌ " + message);
       speak("Transfer failed");
       setStage("confirm");
     }
@@ -346,89 +322,25 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const doExternalTransfer = async () => {
     try {
       const token = localStorage.getItem("token");
-      setField("status", "Initiating external transfer...");
+      setStatus("Initiating external transfer...");
       setStage("sending");
       const res = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/wallet/transfer`,
-        { recipient_code: state.recipientCode, amount: Number(state.amount) },
+        { recipient_code: recipientCode, amount: Number(amount) },
         { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
       );
       if (!mounted.current) return;
-      setField("status", "✅ Transfer initiated");
+      setStatus("✅ Transfer initiated");
       speak("Transfer initiated. We will notify you when it completes.");
       setStage("done");
     } catch (err) {
       console.error("Transfer error:", err?.response?.data || err.message);
       if (!mounted.current) return;
-      setField("status", "❌ Transfer failed");
+      setStatus("❌ Transfer failed");
       speak("Transfer failed. Please try again.");
       setStage("confirm");
     }
   };
-  // Open fund modal / quick top-up
-  const onFund = () => {
-    setField("status", "Opening fund dialog...");
-    setField("fundAmount", "");
-    setStage("fund");
-    speak("Open fund wallet. How much would you like to add?");
-  };
-
-  // Perform funding (example endpoint). Adjust endpoint/backend as needed.
-  const fundWallet = async () => {
-    if (!state.fundAmount || Number(state.fundAmount) <= 0) {
-      setField("status", "Please enter a valid amount to fund.");
-      speak("Please enter a valid amount to fund.");
-      return;
-    }
-
-    const amount = state.fundAmount;
-    
-
-    setField("funding", true);
-    setField("status", "Funding wallet...");
-    try {
-      const token = localStorage.getItem("token");
-
-      
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/fund`, 
-        { amount }, 
-        { headers: { Authorization: `Bearer ${token}` } } 
-      ); 
-      const { authorization_url, reference } = res.data.data;
-      // get Paystack URL & reference // Step 2: Open Paystack payment in new tab/window 
-      window.open(authorization_url, "_blank");
-      // Step 3: Poll backend to verify payment (or call after redirect) 
-      const interval = setInterval(async () => { 
-        try { 
-          const verifyRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/verify/${reference}`, 
-          { headers: { Authorization: `Bearer ${token}` } }); 
-          if (verifyRes.data.balance !== undefined) { 
-            clearInterval(interval); 
-            setStatus("✅ Transfer Successful"); 
-            speak("Transfer successful"); 
-          }
-        } catch (err){
-          console.log("error:", err);
-          
-        }
-      })   
-
-      
-      if (!mounted.current) return;
-      // setField("status", res.data?.message || "Wallet funded successfully");
-      // speak("Wallet funded successfully");
-      // setStage("done");
-    } catch (err) {
-      console.error("Fund error:", err?.response?.data || err.message);
-      if (!mounted.current) return;
-      setField("status", "❌ Funding failed. Please try again.");
-      speak("Funding failed. Please try again.");
-      setStage("idle");
-    } finally {
-      if (mounted.current) setField("funding", false);
-    }
-  };
-
 
   // Long press logic
   const handlePressStart = () => {
@@ -441,7 +353,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     pressStartTime.current = null;
 
     if (pressDuration < 2000) {
-      setField("status", "Tap detected - try long press to confirm");
+      setStatus("Tap detected - try long press to confirm");
       speak("Tap detected - try long press to confirm");
       return;
     }
@@ -452,7 +364,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
   const authenticateAndTransfer = async () => {
     try {
-      setField("status", "Authenticating...");
+      setStatus("Authenticating...");
       const token = localStorage.getItem("token");
       const optRes = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/webauthn/generate-authentication-options`,
@@ -489,18 +401,18 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
       if (!verifyRes.data.verified || !verifyRes.data.token) {
         if (!mounted.current) return;
-        setField("status", "❌ Authentication failed");
+        setStatus("❌ Authentication failed");
         speak("Authentication failed");
         return;
       }
 
       if (verifyRes.data.token) localStorage.setItem("token", verifyRes.data.token);
       if (!mounted.current) return;
-      setField("status", "✅ Authenticated. Proceeding with transfer...");
+      setStatus("✅ Authenticated. Proceeding with transfer...");
       speak("Authenticated. Proceeding with transfer.");
 
       // Branch
-      if (state.mode === "internal") {
+      if (mode === "internal") {
         await doInternalTransfer();
       } else {
         await doExternalTransfer();
@@ -508,7 +420,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     } catch (err) {
       console.error("Auth/transfer error:", err?.response?.data || err.message);
       if (!mounted.current) return;
-      setField("status", "❌ Authentication error: " + (err.message || "unknown"));
+      setStatus("❌ Authentication error: " + (err.message || "unknown"));
       speak("Authentication error. Please try again.");
     }
   };
@@ -520,7 +432,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const handleTouchMove = (e) => {
     if (touchStartX.current !== null) {
       const deltaX = e.touches[0].clientX - touchStartX.current;
-      setField("position", deltaX);
+      setPosition(deltaX);
     }
   };
 
@@ -529,24 +441,25 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
 
     if (deltaX > 80) {
-      // Swipe right → internal
-      setField("mode", "internal");
+      // Swipe right → external
+      setMode("internal");
       speak("External transfer selected");
-      setField("position", 120);
+      setPosition(120);
     } else if (deltaX < -80) {
-      // Swipe left → external
-      setField("mode", "external");
+      // Swipe left → internal
+      setMode("external");
       speak("Internal transfer selected");
-      setField("position", -120);
+      setPosition(-120);
     }
 
     // Reset back to center after 0.8s
-    setTimeout(() => setField("position", 0), 800);
+    setTimeout(() => setPosition(0), 800);
     touchStartX.current = null;
   };
 
-  // local setter to pass down to the FingerprintConsole
-  const setModeLocal = (m) => setField("mode", m);
+
+
+
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-900 dark:text-gray-100 flex flex-col gap-4" aria-labelledby="sendMoneyTitle">
@@ -556,39 +469,39 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
       {/* Status */}
       <div className="w-full p-3 rounded-lg bg-black text-white text-lg font-semibold" role="status" aria-atomic="true">
-        Status: <span className="ml-2">{state.status}</span>
+        Status: <span className="ml-2">{status}</span>
       </div>
 
       {/* Content area */}
       <div className="flex-1 flex flex-col gap-4">
         {/* top controls: phone input or camera info */}
-        {state.mode === "internal" && (
+        {mode === "internal" && (
           <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
             <label htmlFor="toPhone" className="block text-lg font-semibold mb-2">Recipient phone</label>
             <div className="flex gap-2">
               <input
                 id="toPhone"
                 inputMode="tel"
-                value={state.phone}
-                onChange={(e) => setField("phone", e.target.value)}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 placeholder="+2348012345678"
                 className="flex-1 p-3 text-lg rounded border focus:ring-4"
                 aria-describedby="phoneHelp"
               />
               <button onClick={lookupInternalRecipient} className="px-4 py-3 rounded-lg bg-gray-800 text-white font-semibold" aria-label="Find recipient">Find</button>
             </div>
-            <p id="phoneHelp" className="mt-2 text-base">{state.recipientNameInternal ? <>Found: <strong>{state.recipientNameInternal}</strong></> : "Tip: Use numbers only or use the Speak option."}</p>
+            <p id="phoneHelp" className="mt-2 text-base">{recipientNameInternal ? <>Found: <strong>{recipientNameInternal}</strong></> : "Tip: Use numbers only or use the Speak option."}</p>
           </section>
         )}
 
-        {state.mode === "external" && (
+        {mode === "external" && (
           <section className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
             <h2 className="text-lg font-semibold mb-2">External transfer (camera)</h2>
             <div className="flex gap-2">
               <button onClick={startCamera} className="flex-1 py-3 rounded-lg bg-indigo-600 text-white font-semibold" aria-label="Open camera">Open Camera</button>
             </div>
 
-            {state.stage === "camera" && (
+            {stage === "camera" && (
               <div className="mt-3">
                 <div className="rounded overflow-hidden border" aria-hidden>
                   <Webcam
@@ -601,46 +514,19 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
                 </div>
                 <div className="flex gap-2 mt-2">
                   <button onClick={snapAndOcr} className="flex-1 py-3 rounded-lg bg-indigo-700 text-white font-semibold">Snap</button>
-                  <button onClick={() => { setStage("idle"); setField("status", "Cancelled"); speak("Cancelled"); }} className="flex-1 py-3 rounded-lg bg-gray-300 text-black">Cancel</button>
+                  <button onClick={() => { setStage("idle"); setStatus("Cancelled"); speak("Cancelled"); }} className="flex-1 py-3 rounded-lg bg-gray-300 text-black">Cancel</button>
                 </div>
               </div>
             )}
 
-            {state.stage !== "camera" && (
+            {stage !== "camera" && (
               <div className="mt-3 text-base">
-                <p>Bank: <strong>{state.bankName || "Not found"}</strong></p>
-                <p>Account: <strong>{state.accountNumber || "Not found"}</strong></p>
-                <p>Name: <strong>{state.resolvedName || "Not found"}</strong></p>
+                <p>Bank: <strong>{bankName || "Not found"}</strong></p>
+                <p>Account: <strong>{accountNumber || "Not found"}</strong></p>
+                <p>Name: <strong>{resolvedName || "Not found"}</strong></p>
               </div>
             )}
           </section>
-        )}
-
-        {state.mode === "fund" && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold mb-2">Fund Wallet</h3>
-            <p className="text-sm mb-3">Enter amount to add to your wallet.</p>
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={state.fundAmount}
-              onChange={(e) => setField("fundAmount", e.target.value)}
-              placeholder="Amount (NGN)"
-              className="w-full p-3 rounded border mb-3"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={fundWallet}
-                // disabled={state.funding}
-                className="flex-1 py-2 rounded-lg bg-green-600 text-white font-semibold"
-              >
-                {state.funding ? "Funding..." : "Fund wallet"}
-              </button>
-              <button onClick={() => setStage("idle")} className="flex-1 py-2 rounded-lg bg-gray-300">
-                Cancel
-              </button>
-            </div>
-          </div>
         )}
 
         {/* amount area (shared) */}
@@ -651,60 +537,70 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
             <input
               type="tel"
               inputMode="numeric"
-              value={state.amount}
-              onChange={(e) => setField("amount", e.target.value)}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
               placeholder="Amount (NGN)"
               className="w-44 p-3 text-lg rounded border focus:ring-4"
               aria-label="Amount in naira"
             />
           </div>
-          <div className="mt-2 text-lg">Amount: <strong>₦{state.amount || "—"}</strong></div>
+          <div className="mt-2 text-lg">Amount: <strong>₦{amount || "—"}</strong></div>
         </section>
 
-
         {/* confirm summary */}
-        {state.stage === "confirm" && (
+        {stage === "confirm" && (
           <section role="region" aria-label="Confirm transfer" className="bg-white border-2 border-yellow-400 p-4 rounded-lg">
             <h3 className="text-xl font-bold mb-2">Confirm</h3>
 
-            {state.mode === "internal" ? (
+            {mode === "internal" ? (
               <>
-                <p className="text-lg">Recipient phone: <strong>{state.phone}</strong></p>
-                <p className="text-lg">Name: <strong>{state.recipientNameInternal || "—"}</strong></p>
+                <p className="text-lg">Recipient phone: <strong>{phone}</strong></p>
+                <p className="text-lg">Name: <strong>{recipientNameInternal || "—"}</strong></p>
               </>
             ) : (
               <>
-                <p className="text-lg">Bank: <strong>{state.bankName}</strong></p>
-                <p className="text-lg">Account: <strong>{state.accountNumber}</strong></p>
-                <p className="text-lg">Name: <strong>{state.resolvedName}</strong></p>
+                <p className="text-lg">Bank: <strong>{bankName}</strong></p>
+                <p className="text-lg">Account: <strong>{accountNumber}</strong></p>
+                <p className="text-lg">Name: <strong>{resolvedName}</strong></p>
               </>
             )}
 
-            <p className="text-lg mt-2">Amount: <strong>₦{state.amount}</strong></p>
+            <p className="text-lg mt-2">Amount: <strong>₦{amount}</strong></p>
             <p className="mt-3 text-base">Hold the button below to authenticate and send.</p>
           </section>
         )}
 
         {/* processing / done */}
-        {state.stage === "sending" && <div className="p-4 rounded-lg bg-gray-100 text-center text-lg">Processing transfer...</div>}
+        {stage === "sending" && <div className="p-4 rounded-lg bg-gray-100 text-center text-lg">Processing transfer...</div>}
 
-        {state.stage === "done" && (
+        {stage === "done" && (
           <div className="p-4 rounded-lg bg-green-50 text-center">
-            <p className="text-2xl font-bold text-green-700">{state.status}</p>
-            <button onClick={() => resetAll("Ready")} className="mt-3 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold">Done</button>
+            <p className="text-2xl font-bold text-green-700">{status}</p>
+            <button onClick={() => {
+              setStage("idle");
+              setStatus("Ready");
+              setAccountNumber("");
+              setBankName("");
+              setAmount("");
+              setResolvedName("");
+              setRecipientCode("");
+              setPhone("");
+              setRecipientNameInternal("");
+            }} className="mt-3 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold">Done</button>
           </div>
         )}
       </div>
 
       {/* Bottom control row: Internal left | Fingerprint center | External right */}
       <FingerprintConsole
-        setMode={setModeLocal}
+        setMode={setMode}
         speak={speak}
         handlePressStart={handlePressStart}
         handlePressEnd={handlePressEnd}
-        onFund={onFund}
+        // setSwipeLocked={setSwipeLocked}
       />
 
     </main>
   );
+
 }

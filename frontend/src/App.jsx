@@ -10,6 +10,7 @@ import AuthCallback from './components/AuthCallback';
 import AccessibleSendMoney from './components/AccessibleSendMoney';
 import CompleteProfile from './components/CompleteProfile';
 import PaymentCallback from './pages/PaymentCallback';
+import NotFound from './components/NotFound';
 
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Route path="/transfer" element={<AccessibleTransfer />} />
         <Route path="/cart" element={<Cart/>} />
         <Route path="/docs" element={<Documentation/>} />
+        <Route path="/*" element={<NotFound/>} />
         <Route path="/complete-profile" element={<CompleteProfile/>} />
         <Route path="/sendmoney" element={<AccessibleSendMoney/>} />
         <Route path="/payment/callback" element={<PaymentCallback />} />

@@ -16,7 +16,7 @@ export default function Dashboard() {
 
   // percent of viewport height that should be swipeable from the top.
   // 0.65 => top 65% swipeable, bottom 35% NOT swipeable.
-  const SWIPE_PERCENT = 0.70;
+  const SWIPE_PERCENT = 0.60;
 
   useEffect(() => {
     const message = `You are now on the ${labels[index]} page`;
