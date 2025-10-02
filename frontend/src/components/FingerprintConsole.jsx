@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
 import { Fingerprint } from "lucide-react";
 
-export default function FingerprintConsole({ handlePressStart, handlePressEnd, setMode, speak, onFund }) {
+export default function FingerprintConsole(
+  { handlePressStart, handlePressEnd, setMode, speak, onFund, listenForAmount}) {
   const startXRef = useRef(null);
   const startYRef = useRef(null);
   const pointerIdRef = useRef(null);
@@ -27,6 +28,7 @@ export default function FingerprintConsole({ handlePressStart, handlePressEnd, s
     e.stopPropagation();
     e.preventDefault();
   };
+
 
   const onPointerMove = (e) => {
     if (startXRef.current == null || startYRef.current == null) return;
@@ -92,6 +94,7 @@ export default function FingerprintConsole({ handlePressStart, handlePressEnd, s
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onClick={(e)=> { if (e.key === " " || e.key === "Enter") listenForAmount?.(); }}
           onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") handlePressStart?.(); }}
           onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") handlePressEnd?.(); }}
           style={{

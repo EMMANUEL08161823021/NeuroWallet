@@ -1,218 +1,96 @@
-import { useState, useEffect, useRef } from "react";
-import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import FundWallet from "../../pages/FundWallet";
-import Transfer from "../../pages/Transfer";
-import axios from "axios";
+import React, { useRef, useState } from "react";
 import AccessibleSendMoney from "../AccessibleSendMoney";
-
 import { useApp } from "../../context/AppContext";
 
+export default function Homepage() {
+  const { balance, refreshBalance } = useApp(); // refreshBalance optional
+  const [loading, setLoading] = useState(false);
+  const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
 
-
-
-
-// GestureButton component to handle tap, double tap, and swipe
-const GestureButton = ({ onTap, onDoubleTap, onSwipe }) => {
-  const buttonRef = useRef(null);
-  let tapCount = 0;
-  let touchStartX = 0;
-
-  const handleTouchStart = (e) => {
-    touchStartX = e.touches[0].clientX;
-    tapCount++;
-    setTimeout(() => {
-      if (tapCount === 1) {
-        onTap();
-      } else if (tapCount === 2) {
-        onDoubleTap();
-      }
-      tapCount = 0;
-    }, 300);
+  const format = (val) => {
+    const n = Number(val ?? 0);
+    if (Number.isNaN(n)) return String(val ?? "0");
+    return n.toLocaleString("en-NG");
   };
 
-  const handleTouchMove = (e) => {
-    const touchEndX = e.touches[0].clientX;
-    const diff = touchEndX - touchStartX;
-    if (Math.abs(diff) > 50) {
-      onSwipe(diff > 0 ? "right" : "left");
+  const spokenMessage = (val) => `Your wallet balance is ${format(val)} naira.`;
+
+  function speakText(text) {
+    if (typeof window === "undefined") return;
+    const synth = synthRef.current;
+    if (!synth) return;
+    try {
+      if (synth.speaking || synth.pending) synth.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = navigator?.language || "en-NG";
+      synth.speak(utter);
+    } catch (err) {
+      console.warn("TTS error", err);
     }
-  };
+  }
 
-};
-
-const Homepage = () => {
-  const [amount, setAmount] = useState("");
-  const [numericAmount, setNumericAmount] = useState(null);
-  const [description, setDescription] = useState("");
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
-  const [query, setQuery] = useState("");
-  const [error, setError] = useState("");
-  const [speechMode, setSpeechMode] = useState(null); // null, "command"
-  const [listeningForAmount, setListeningForAmount] = useState(false); // New state for amount listening
-
-  const beneficiaries = [
-    { name: "Emmanuel", provider: "Palmpay", account: "7082659880" },
-
-  ];
-
-  const {balance} = useApp();
-
-
-  const filteredBeneficiaries = beneficiaries.filter((b) =>
-    `${b.name} ${b.provider}`.toLowerCase().includes(query.trim().toLowerCase())
-  );
-
-  const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
-
-  useEffect(() => {
-    if (!browserSupportsSpeechRecognition) {
-      setError("Your browser does not support speech recognition. Please use Chrome.");
-    }
-  }, [browserSupportsSpeechRecognition]);
-
-  useEffect(() => {
-    if (transcript && speechMode) {
-      const command = transcript.toLowerCase().trim();
-      if (speechMode === "command") {
-        switch (command) {
-          case "one":
-            setListeningForAmount(true); // Show "Listening..." for amount
-            const fixedAmount = "2000.00";
-            setNumericAmount(fixedAmount);
-            setAmount(fixedAmount);
-            const amountUtterance = new SpeechSynthesisUtterance("Your Account Balance is $2000");
-            window.speechSynthesis.speak(amountUtterance);
-            setSpeechMode(null);
-            setListeningForAmount(false); // Hide "Listening..." after setting amount
-            break;
-          case "A":
-            console.log(selectedBeneficiary);
-            
-            if (selectedBeneficiary) {
-              const nameUtterance = new SpeechSynthesisUtterance(`Name: ${selectedBeneficiary.name}`);
-              window.speechSynthesis.speak(nameUtterance);
-            } else {
-              setError("No beneficiary selected.");
-            }
-            setSpeechMode(null);
-            break;
-          case "B":
-            if (selectedBeneficiary) {
-              const providerUtterance = new SpeechSynthesisUtterance(`Provider: ${selectedBeneficiary.provider}`);
-              window.speechSynthesis.speak(providerUtterance);
-            } else {
-              setError("No beneficiary selected.");
-            }
-            setSpeechMode(null);
-            break;
-          case "C":
-            if (selectedBeneficiary) {
-              const accountUtterance = new SpeechSynthesisUtterance(`Account number: ${selectedBeneficiary.account}`);
-              window.speechSynthesis.speak(accountUtterance);
-            } else {
-              setError("No beneficiary selected.");
-            }
-            setSpeechMode(null);
-            break;
-          default:
-            setError("Invalid command. Say '1' for amount, 'A' for name, 'B' for provider, or 'C' for account number.");
-            setSpeechMode(null);
-        }
-      }
-      resetTranscript();
-    }
-  }, [transcript, speechMode, selectedBeneficiary]);
-
-  useEffect(() => {
-    if (selectedBeneficiary) {
-      const utterance = new SpeechSynthesisUtterance(
-        `Selected beneficiary: ${selectedBeneficiary.name}, ${selectedBeneficiary.provider}, account number ${selectedBeneficiary.account}`
-      );
-      window.speechSynthesis.speak(utterance);
-    }
-  }, [selectedBeneficiary]);
-
-  const startListening = (mode) => {
-    if (!browserSupportsSpeechRecognition) return;
-    resetTranscript();
-    setError("");
-    setSpeechMode(mode);
-    SpeechRecognition.startListening({ continuous: false, language: "en-US" });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (numericAmount === null || isNaN(numericAmount) || numericAmount <= 0) {
-      setError("Please provide a valid amount.");
-      return;
-    }
-    const confirmationText = `Transferring $${numericAmount} to ${selectedBeneficiary.name}`;
-    const utterance = new SpeechSynthesisUtterance(confirmationText);
-    window.speechSynthesis.speak(utterance);
-    alert(confirmationText);
-    setAmount("");
-    setNumericAmount(null);
-    setDescription("");
-    resetTranscript();
-  };
-
-
-  const handleDoubleTap = () => {
-    setAmount("");
-    setNumericAmount(null);
-    setSelectedBeneficiary(null);
-    setError("");
-    setSpeechMode(null);
-    setListeningForAmount(false);
-    resetTranscript();
-    const cancelUtterance = new SpeechSynthesisUtterance("Transaction attempt canceled.");
-    window.speechSynthesis.speak(cancelUtterance);
-  };
-
-  const handleSwipe = (direction) => {
-    if (direction === "right") {
-      navigator.vibrate(200); // Single vibration for swipe detected
-      if (selectedBeneficiary && numericAmount) {
-        const confirmationText = `Transferring $${numericAmount} to ${selectedBeneficiary.name}`;
-        const confirmUtterance = new SpeechSynthesisUtterance(confirmationText);
-        window.speechSynthesis.speak(confirmUtterance);
-        navigator.vibrate([200, 100, 200]); // Double vibration for confirmation
-        alert(confirmationText);
-      } else {
-        setError("Please select a beneficiary and specify an amount first.");
-      }
-    }
-  };
-
-  // client call to perform internal transfer
-  async function sendInternal(toEmail, amount) {
-    const token = localStorage.getItem("token");
-    const res = await axios.post(
-      `${import.meta.env.VITE_BACKEND_URL}/api/wallet/transfer/internal`,
-      { toEmail, amount },
-      { headers: { Authorization: `Bearer ${token}` } }
+  // Handler for tapping the page area (ignores clicks on interactive elements
+  // and on elements marked with data-skip-speak)
+  async function handlePageTap(e) {
+    // ignore taps that are inside interactive elements
+    speakText(spokenMessage(balance));
+    const interactive = e.target.closest(
+      "button, a, input, textarea, select, [role='button'], [role='link'], [contenteditable='true']"
     );
-    return res.data;
+    if (interactive) return;
+
+    // ignore taps on elements that explicitly opt-out
+    if (e.target.closest("[data-skip-speak]")) return;
+
+
+
+    setLoading(true);
+    try {
+      if (typeof refreshBalance === "function") {
+        await refreshBalance(); // get freshest balance (assumed to update context)
+      }
+      // speak after refresh (or immediately if no refresh fn)
+      speakText(spokenMessage(balance));
+    } catch (err) {
+      console.error("Failed to refresh balance", err);
+      speakText(spokenMessage(balance));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <div
+      onClick={handlePageTap}
+      className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen"
+      role="button"
+      aria-label="Tap the page background to hear wallet balance"
+    >
       <div className="p-6 rounded-lg shadow-md max-w-lg mx-auto border-2 border-black">
-        <div className="flex py-2 justify-between">
-          <h2>Dashboard</h2>
-          <h3>Wallet Balance: ₦{balance}</h3>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Dashboard</h2>
+
+          <div className="flex items-center gap-3">
+
+            <button
+              onClick={(ev) => {
+                ev.stopPropagation(); // keep button taps from triggering page tap
+                // do reveal / refresh logic here if needed
+              }}
+              className="px-4 py-2 rounded-lg border bg-white dark:bg-gray-800"
+            >
+              {loading ? "Refreshing…" : `Balance: ₦${format(balance)}`}
+            </button>
+          </div>
         </div>
 
-        <AccessibleSendMoney/>
+        <hr className="my-4" />
 
-        <GestureButton
-          onTap={() => startListening("command")}
-          onDoubleTap={handleDoubleTap}
-          onSwipe={handleSwipe}
-        />
+        {/* Wrap and opt-out so taps inside AccessibleSendMoney won't trigger page tap */}
+        <div data-skip-speak onClick={(e) => e.stopPropagation()}>
+          <AccessibleSendMoney />
+        </div>
       </div>
     </div>
   );
-};
-
-export default Homepage;
+}

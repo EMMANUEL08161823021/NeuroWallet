@@ -276,6 +276,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
 
   // Listen for spoken amount (shared)
   const listenForAmount = () => {
+    
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setField("status", "Voice input not supported.");
@@ -440,10 +441,12 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     const pressDuration = Date.now() - pressStartTime.current;
     pressStartTime.current = null;
 
+    if(pressDuration < 1000) listenForAmount();
+
     if (pressDuration > 2000)
+    await authenticateAndTransfer();
 
     // Long press → WebAuthn authentication then do transfer (internal or external)
-    await authenticateAndTransfer();
   };
 
   const authenticateAndTransfer = async () => {
@@ -514,36 +517,51 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     }
   };
 
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
+  const onTap = async (e) => {
+    // prevent accidental double triggers and bubble
+    e.stopPropagation();
+    e.preventDefault();
 
-  const handleTouchMove = (e) => {
-    if (touchStartX.current !== null) {
-      const deltaX = e.touches[0].clientX - touchStartX.current;
-      setField("position", deltaX);
-    }
-  };
-
-  const handleTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-
-    if (deltaX > 80) {
-      // Swipe right → internal
-      setField("mode", "internal");
-      speak("External transfer selected");
-      setField("position", 120);
-    } else if (deltaX < -80) {
-      // Swipe left → external
-      setField("mode", "external");
-      speak("Internal transfer selected");
-      setField("position", -120);
+    // If there's a voice-listener function, prefer that (it should set the amount itself)
+    if (typeof listenForAmount === "function") {
+      try {
+        await listenForAmount(); // assume this updates amount in parent
+        speak?.("Listening for amount");
+        return;
+      } catch (err) {
+        // fall through to prompt if voice listener fails
+        console.warn("listenForAmount failed", err);
+      }
     }
 
-    // Reset back to center after 0.8s
-    setTimeout(() => setField("position", 0), 800);
-    touchStartX.current = null;
+    // Fallback: prompt the user for an amount (works on mobile/desktop)
+    const raw = window.prompt("Enter amount (NGN)", "");
+    if (raw === null) {
+      // user cancelled
+      return;
+    }
+
+    // sanitize digits only
+    const digits = String(raw).replace(/[^0-9]/g, "");
+    if (!digits) {
+      speak?.("No valid amount entered");
+      return;
+    }
+
+    const parsed = parseInt(digits, 10);
+    if (Number.isNaN(parsed)) {
+      speak?.("Invalid amount");
+      return;
+    }
+
+    // Set the amount via prop (parent should update state)
+    if (typeof setAmount === "function") {
+      setAmount(parsed);
+      speak?.(`Amount set to ${parsed} naira`);
+    } else {
+      // if no setter is provided, still announce the parsed amount
+      speak?.(`Parsed amount ${parsed} naira. Provide setAmount prop to persist it.`);
+    }
   };
 
   // local setter to pass down to the FingerprintConsole
@@ -756,6 +774,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       <FingerprintConsole
         setMode={setModeLocal}
         speak={speak}
+        onTap={listenForAmount}
         handlePressStart={handlePressStart}
         handlePressEnd={handlePressEnd}
         onFund={onFund}
