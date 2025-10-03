@@ -83,7 +83,7 @@ exports.completeProfile = async (req, res, next) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    // 3️⃣ Update profile if firstName or phone provided
+    // 3️⃣ Update profile if firstName432 or phone provided
     if (firstName) user.name = firstName;
     if (phone) user.phone = phone;
     await user.save();

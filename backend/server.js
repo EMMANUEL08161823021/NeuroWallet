@@ -75,7 +75,7 @@ app.use("/api/webauthn", webauthnRoutes);
 app.use("/api/auth", magicLinkRoutes);
 app.use("/api/user", profileRouter);
 app.use("/api/pin", pinRoutes);
-app.use("/api/accounts", accountRoutes);
+app.use("/api/accounts", accocuntRoutes);
 app.use("/api/transfers", transferRoutes);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/wallet", walletRoutes);
