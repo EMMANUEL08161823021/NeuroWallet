@@ -129,6 +129,71 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
   const merge = (payload) => dispatch({ type: "MERGE", payload });
   const resetAll = (status = "Ready") => dispatch({ type: "RESET", status });
 
+
+  // utils/tts.js  (or inline in the same file)
+  function looksLikePhone(value) {
+    if (!value) return false;
+    // strip spaces and common separators but keep leading +
+    const v = String(value).trim();
+    // consider as phone when it has >=7 digits ignoring separators
+    const digitsOnly = v.replace(/[^\d]/g, "");
+    return digitsOnly.length >= 7;
+  }
+
+  function formatPhoneForSpeech(value) {
+    if (!value) return "";
+    const v = String(value).trim();
+    const hasPlus = v.startsWith("+");
+    // keep only digits (we'll re-insert spaces). Preserve plus if present.
+    const digits = v.replace(/[^\d]/g, "");
+    // Option A: simple digit-by-digit ("8 0 1 2 3 4 ...")
+    // return (hasPlus ? "plus " : "") + digits.split("").join(" ");
+    //
+    // Option B: digit-by-digit with light grouping and commas (commas create tiny pauses)
+    // e.g. "+234 801 234 5678" -> "plus 2 3 4, 8 0 1, 2 3 4, 5 6 7 8"
+    const groups = [];
+    // group country code (first 3 if length >=11 else first 3) then groups of 3-
+    // This is heuristic — tune to your user base (Nigeria uses +234).
+    if (hasPlus && digits.length > 3) {
+      groups.push(digits.slice(0, 3)); // country code
+      let rest = digits.slice(3);
+      while (rest.length) {
+        groups.push(rest.slice(0, 3));
+        rest = rest.slice(3);
+      }
+    } else {
+      // no plus: group into 3s from start
+      let i = 0;
+      while (i < digits.length) {
+        groups.push(digits.slice(i, i + 3));
+        i += 3;
+      }
+    }
+    // convert groups into spaced digits and join with comma for short pause
+    const spoken = groups.map(g => g.split("").join(" ")).join(", ");
+    return (hasPlus ? "plus " : "") + spoken;
+  }
+
+  function speakText(text, { lang = navigator?.language || "en-NG", rate = 1.0, pitch = 1.0 } = {}) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      // fallback: no TTS
+      console.warn("TTS not supported");
+      return;
+    }
+    try {
+      const synth = window.speechSynthesis;
+      if (synth.speaking || synth.pending) synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      u.rate = rate;
+      u.pitch = pitch;
+      synth.speak(u);
+    } catch (err) {
+      console.warn("speakText failed", err);
+    }
+  }
+
+
   // Start camera
   const startCamera = () => {
     setField("status", "Camera opened. Point at account details and tap 'Snap'.");
@@ -303,7 +368,21 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         setField("status", `Amount set to ₦${parsed}`);
         speak(`Amount set to ${parsed} naira`);
         setStage("confirm");
-        speak(`You are sending naira ${parsed} to ${state.mode === "internal" ? state.phone || state.recipientNameInternal || "recipient" : state.resolvedName || state.accountNumber}. Press and hold to confirm.`);
+        // determine recipient text (name or phone)
+        const recipientRaw =
+          state.mode === "internal"
+            ? (state.phone || state.recipientNameInternal || "recipient")
+            : (state.resolvedName || state.accountNumber || "recipient");
+
+        let recipientForSpeech = recipientRaw;
+        if (looksLikePhone(recipientRaw)) {
+          recipientForSpeech = formatPhoneForSpeech(recipientRaw);
+        }
+
+        // amount (you may want to keep as number read normally)
+        const amountForSpeech = parsed; // or formatNumberForSpeech(parsed) if you prefer words
+
+        speakText(`You are sending naira ${amountForSpeech} to ${recipientForSpeech}. Press and hold to confirm.`);
       } else {
         setField("status", "Could not understand amount. Please try again.");
         speak("Could not understand the amount. Please try again.");
