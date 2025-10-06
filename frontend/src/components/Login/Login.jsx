@@ -22,6 +22,11 @@ export default function Login() {
   const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
 
+  // const [form, setForm] = useState({
+  //   email: "",
+  //   pin: "",
+  // })
+
   const commonDomains = ["gmail.com", "outlook.com", "yahoo.com", "hotmail.com"];
 
   const setNotice = (type, text) => setMsg({ type, text });
