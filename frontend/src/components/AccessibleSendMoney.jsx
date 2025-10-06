@@ -354,6 +354,8 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
         { recipient_code: state.recipientCode, amount: Number(state.amount) },
         { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
       );
+
+      console.log("response: ", res)
       if (!mounted.current) return;
       setField("status", "✅ Transfer initiated");
       speak("Transfer initiated. We will notify you when it completes.");
@@ -441,7 +443,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
     const pressDuration = Date.now() - pressStartTime.current;
     pressStartTime.current = null;
 
-    if(pressDuration < 1000) listenForAmount();
+    // if(pressDuration < 1000) listenForAmount();
 
     if (pressDuration > 2000)
     await authenticateAndTransfer();
@@ -774,7 +776,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
       <FingerprintConsole
         setMode={setModeLocal}
         speak={speak}
-        onTap={listenForAmount}
+        listenForAmount={listenForAmount}
         handlePressStart={handlePressStart}
         handlePressEnd={handlePressEnd}
         onFund={onFund}

@@ -32,7 +32,7 @@ export default function DocsPage() {
             <ul className="list-disc list-inside space-y-1 text-sm">
               <li>Open the app — it can read the screen aloud for you.</li>
               <li>Swipe left or right to move between options.</li>
-              <li>Double-tap anywhere to select.</li>
+              <li>Double-tap anywhere on the Dashboard to know your wallet balance.</li>
             </ul>
           </div>
         </>
@@ -52,13 +52,13 @@ export default function DocsPage() {
                 inbox and you’re in.
               </span>
             </li>
-            <li className="flex items-start gap-2">
+            {/* <li className="flex items-start gap-2">
               <Lock className="h-5 w-5 text-blue-600 mt-1" />
               <span>
                 <strong>PIN:</strong> Set a 4–6 digit code. Quick and secure for
                 everyday logins.
               </span>
-            </li>
+            </li> */}
             <li className="flex items-start gap-2">
               <KeyRound className="h-5 w-5 text-blue-600 mt-1" />
               <span>
@@ -75,26 +75,33 @@ export default function DocsPage() {
       icon: <Send className="h-4 w-4 mr-2" />,
       content: (
         <ol className="list-decimal list-inside space-y-2">
-          <li>Go to <strong>Send Money</strong>.</li>
-          <li>Enter recipient’s details or pick from contacts.</li>
-          <li>Type the amount you want to send.</li>
-          <li>Confirm with PIN, passkey, or MagicLink.</li>
-          <li>Get a confirmation notification ✅.</li>
+          <li>Open the <strong>Dashboard</strong>.</li>
+          <li>Use the Fingerprint console: swipe left for an <strong>internal</strong> transfer or swipe right for an <strong>external</strong> transfer.</li>
+          <li>
+            Enter the recipient’s details <em>For external transfers</em>, tap the <strong>Camera</strong> feature to capture the recipient’s account number and bank — the app will attempt to resolve the account name automatically.
+          </li>
+          <li>Enter the amount manually — or tap the Fingerprint console and speak the amount to set it by voice.</li>
+          <li>Hold the Fingerprint console for about <strong>3–4 seconds</strong> to perform biometric authentication.</li>
+          <li>After authentication, confirm the transaction — you’ll receive a confirmation notification and a receipt when the transfer completes. ✅</li>
         </ol>
       ),
     },
+
     receive: {
       title: "Receive Money",
       icon: <Download className="h-4 w-4 mr-2" />,
       content: (
         <ol className="list-decimal list-inside space-y-2">
-          <li>Go to <strong>Receive Money</strong>.</li>
-          <li>Copy your wallet address or share your QR code.</li>
-          <li>Wait for the sender to pay.</li>
-          <li>Instant confirmation when funds arrive 🎉.</li>
+          <li>Open the <strong>Dashboard</strong>.</li>
+          <li>Swipe the Fingerprint console <strong>upwards</strong> to select <strong>Fund Wallet</strong>.</li>
+          <li>Enter the amount manually — or tap the Fingerprint console and speak the amount to set it by voice.</li>
+          <li>Hold the Fingerprint console for about <strong>3–4 seconds</strong> to perform biometric authentication.</li>
+          <li>Then, <strong>Paystack</strong> handles payment flow and process wallet funding.</li>
+          <li>Funds are credited to your wallet and you’ll get an instant confirmation and receipt when the transaction completes. 🎉</li>
         </ol>
       ),
     },
+
   };
 
   return (
@@ -108,8 +115,10 @@ export default function DocsPage() {
             alt="Logo"
             className="h-8 w-8 sm:h-10 sm:w-10 dark:invert"
           />
-          <h1 className="font-bold text-lg sm:text-xl text-blue-600 dark:text-blue-400">
-            NeuroWallet
+          <h1 >
+            <Link to={"/"} className="font-bold text-lg sm:text-xl text-blue-600 dark:text-blue-400">
+              NeuroWallet
+            </Link>
           </h1>
         </div>
 

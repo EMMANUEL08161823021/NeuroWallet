@@ -156,6 +156,11 @@ router.post("/recipient", requireAuth, async (req, res) => {
 // POST /api/wallet/transfer
 router.post("/transfer", requireAuth, async (req, res) => {
   const { recipient_code, amount } = req.body; // amount in NGN
+
+
+  console.log("recipient_code:", recipient_code);
+  console.log("amount:", amount);
+  
   const user = await User.findById(req.user.sub);
 
   if (!recipient_code || !amount || amount <= 0) return res.status(400).json({ msg: "Invalid input" });
@@ -170,6 +175,9 @@ router.post("/transfer", requireAuth, async (req, res) => {
       status: "pending",
       reference: `tx_${Date.now()}` // or use a UUID
     };
+
+    console.log("tx:", tx);
+    
     user.transactions.push(tx);
     user.wallet.balance -= amount; // optimistically deduct; handle rollback if failure
     await user.save();
@@ -177,8 +185,8 @@ router.post("/transfer", requireAuth, async (req, res) => {
     // Initiate Paystack transfer (amount in kobo)
     const paystackRes = await axios.post(
       "https://api.paystack.co/transfer",
-      { source: "balance", amount: Math.round(amount * 100), recipient: recipient_code, reference: tx.reference },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      { source: "balance", amount: Math.round(amount * 100), recipient: recipient_code, reference: tx.reference, reason: "Buying for goods and services" },
+      { headers: { Authorization: `Bearer ${process.env.VITE_PAYSTACK_SECRET_KEY}` } }
     );
 
     // Update transaction with immediate response
