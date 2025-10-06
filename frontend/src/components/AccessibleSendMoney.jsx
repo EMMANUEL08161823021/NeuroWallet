@@ -615,7 +615,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
             <p id="phoneHelp" className="mt-2 text-base">
               {state.recipientNameInternal
                 ? <>Found: <strong>{state.recipientNameInternal}</strong></>
-                : "Tip: Use digits only or press the Speak button to enter recipient by voice."}
+                : "Tip: Use digits only"}
             </p>
           </section>
         )}
@@ -713,7 +713,7 @@ export default function AccessibleSendMoney({ defaultFromAccountId = "PRIMARY_AC
               <button
                 key={val}
                 onClick={() => setField("amount", String(val))}
-                className="px-3 py-1 rounded-md  bg-gray-200 dark:bg-gray-400 hover:bg-gray-300 text-sm"
+                className="px-3 py-2 rounded-md  bg-gray-200 dark:bg-gray-400 hover:bg-gray-300 text-sm"
                 aria-label={`Quick amount ${val} naira`}
               >
                 ₦{val}
